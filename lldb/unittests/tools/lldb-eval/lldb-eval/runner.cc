@@ -96,8 +96,13 @@ lldb::SBProcess LaunchTestProgram(lldb::SBDebugger debugger,
       source_file.c_str(), FindBreakpointLine(source_path.c_str(), break_line));
   // Test programs don't perform any I/O, so current directory doesn't
   // matter.
+  if (bp.GetNumLocations() == 0)
+    std::cerr << "WARNING:  Unable to resolve breakpoint to any actual locations." << std::endl;
   auto process = target.LaunchSimple(argv, nullptr, ".");
-
+  if (!process.IsValid()) {
+    std::cerr << "ERROR:  Unable to launch process. Check that the path to the binary is valid." << std::endl;
+    return process;
+  }
   lldb::SBEvent event;
   auto listener = debugger.GetListener();
 
