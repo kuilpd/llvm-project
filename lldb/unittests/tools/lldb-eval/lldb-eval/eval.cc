@@ -1105,7 +1105,7 @@ Value Interpreter::EvaluateBinaryAddition(Value lhs, Value rhs) {
     assert(CompareTypes(lhs.type(), rhs.type()) &&
            "invalid ast: operand must have the same type");
     return EvaluateArithmeticOp(target_, BinaryOpKind::Add, lhs, rhs,
-                                lhs.type()->GetCanonicalType());
+                                lhs.type());
   }
 
   // Here one of the operands must be a pointer and the other one an integer.
@@ -1135,7 +1135,7 @@ Value Interpreter::EvaluateBinarySubtraction(Value lhs, Value rhs,
     assert(CompareTypes(lhs.type(), rhs.type()) &&
            "invalid ast: operand must have the same type");
     return EvaluateArithmeticOp(target_, BinaryOpKind::Sub, lhs, rhs,
-                                lhs.type()->GetCanonicalType());
+                                lhs.type());
   }
   assert(lhs.IsPointer() && "invalid ast: lhs must be a pointer");
 
@@ -1173,7 +1173,7 @@ Value Interpreter::EvaluateBinaryMultiplication(Value lhs, Value rhs) {
          "invalid ast: operands must be arithmetic and have the same type");
 
   return EvaluateArithmeticOp(target_, BinaryOpKind::Mul, lhs, rhs,
-                              lhs.type()->GetCanonicalType());
+                              lhs.type());
 }
 
 Value Interpreter::EvaluateBinaryDivision(Value lhs, Value rhs) {
@@ -1196,7 +1196,7 @@ Value Interpreter::EvaluateBinaryDivision(Value lhs, Value rhs) {
   }
 
   return EvaluateArithmeticOp(target_, BinaryOpKind::Div, lhs, rhs,
-                              lhs.type()->GetCanonicalType());
+                              lhs.type());
 }
 
 Value Interpreter::EvaluateBinaryRemainder(Value lhs, Value rhs) {
@@ -1230,7 +1230,7 @@ Value Interpreter::EvaluateBinaryBitwise(BinaryOpKind kind, Value lhs,
          "invalid ast: operation must be '&', '|' or '^'");
 
   return EvaluateArithmeticOpInteger(target_, kind, lhs, rhs,
-                                     ToSBType(lhs.type()->GetCanonicalType()));
+                                     ToSBType(lhs.type()));
 }
 
 Value Interpreter::EvaluateBinaryShift(BinaryOpKind kind, Value lhs,
