@@ -715,38 +715,21 @@ TEST_F(EvalTest, TestPointerArithmetic) {
 
   EXPECT_THAT(Eval("array - 1"), IsOk());
   EXPECT_THAT(Eval("array_ref - 1"), IsOk());
-#ifndef __EMSCRIPTEN__
-  EXPECT_THAT(
-      Eval("1 - array"),
-      IsError("invalid operands to binary expression ('int' and 'int [10]')\n"
-              "1 - array\n"
-              "  ^"));
-#else
   EXPECT_THAT(
       Eval("1 - array"),
       IsError("invalid operands to binary expression ('int' and 'int[10]')\n"
               "1 - array\n"
               "  ^"));
-#endif
 
   EXPECT_THAT(Eval("array - array"), IsEqual("0"));
   EXPECT_THAT(Eval("array - array_ref"), IsEqual("0"));
   EXPECT_THAT(Eval("array_ref - array_ref"), IsEqual("0"));
-#ifndef __EMSCRIPTEN__
-  EXPECT_THAT(
-      Eval("array + array"),
-      IsError(
-          "invalid operands to binary expression ('int [10]' and 'int [10]')\n"
-          "array + array\n"
-          "      ^"));
-#else
   EXPECT_THAT(
       Eval("array + array"),
       IsError(
           "invalid operands to binary expression ('int[10]' and 'int[10]')\n"
           "array + array\n"
           "      ^"));
-#endif
 }
 
 TEST_F(EvalTest, PointerPointerArithmeticFloat) {
@@ -807,43 +790,6 @@ TEST_F(EvalTest, PointerIntegerComparison) {
   EXPECT_THAT(Eval("0 == std_nullptr_t"), IsEqual("true"));
   EXPECT_THAT(Eval("std_nullptr_t != 0"), IsEqual("false"));
 
-#ifndef __EMSCRIPTEN__
-  EXPECT_THAT(
-      Eval("(void*)0 > nullptr"),
-      IsError(
-          "invalid operands to binary expression ('void *' and 'nullptr_t')"));
-
-  EXPECT_THAT(
-      Eval("nullptr > 0"),
-      IsError("invalid operands to binary expression ('nullptr_t' and 'int')"));
-
-  EXPECT_THAT(
-      Eval("1 == nullptr"),
-      IsError("invalid operands to binary expression ('int' and 'nullptr_t')"));
-
-  EXPECT_THAT(
-      Eval("nullptr == (int)0"),
-      IsError("invalid operands to binary expression ('nullptr_t' and 'int')"));
-
-  EXPECT_THAT(
-      Eval("false == nullptr"),
-      IsError(
-          "invalid operands to binary expression ('bool' and 'nullptr_t')"));
-
-  EXPECT_THAT(
-      Eval("nullptr == (true ? 0 : 0)"),
-      IsError("invalid operands to binary expression ('nullptr_t' and 'int')"));
-
-  // TODO: Enable when we support char literals.
-  // EXPECT_THAT(
-  //     Eval("'\0' == nullptr"),
-  //     IsError(
-  //         "invalid operands to binary expression ('char' and 'nullptr_t')"));
-
-  EXPECT_THAT(Eval("nullptr > nullptr"),
-              IsError("invalid operands to binary expression ('nullptr_t' and "
-                      "'nullptr_t')"));
-#else
   EXPECT_THAT(Eval("(void*)0 > nullptr"),
               IsError("invalid operands to binary expression ('void *' and "
                       "'std::nullptr_t')"));
@@ -872,7 +818,6 @@ TEST_F(EvalTest, PointerIntegerComparison) {
       Eval("nullptr > nullptr"),
       IsError("invalid operands to binary expression ('std::nullptr_t' and "
               "'std::nullptr_t')"));
-#endif
 
   // These are not allowed by C++, but we support it as an extension.
   EXPECT_THAT(Eval("(void*)1 == 1"), IsEqual("true"));
@@ -1030,17 +975,10 @@ TEST_F(EvalTest, TestMemberOf) {
 
   EXPECT_THAT(Eval("sp.x"), IsError("member reference type 'Sx *' is a "
                                     "pointer; did you mean to use '->'"));
-#ifndef __EMSCRIPTEN__
-  EXPECT_THAT(
-      Eval("sarr.x"),
-      IsError(
-          "member reference base type 'Sx [2]' is not a structure or union"));
-#else
   EXPECT_THAT(
       Eval("sarr.x"),
       IsError(
           "member reference base type 'Sx[2]' is not a structure or union"));
-#endif
 
   // Test for record typedefs.
   EXPECT_THAT(Eval("sa.x"), IsEqual("3"));
@@ -1461,21 +1399,12 @@ TEST_F(EvalTest, TestCStyleCastPointer) {
   EXPECT_THAT(Eval("(std::nullptr_t)0"),
               IsEqual(Is32Bit() ? "0x00000000" : "0x0000000000000000"));
 
-#ifndef __EMSCRIPTEN__
-  EXPECT_THAT(Eval("(std::nullptr_t)1"),
-              IsError("C-style cast from 'int' to 'std::nullptr_t' (aka "
-                      "'nullptr_t') is not allowed"));
-  EXPECT_THAT(Eval("(std::nullptr_t)ap"),
-              IsError("C-style cast from 'int *' to 'std::nullptr_t' (aka "
-                      "'nullptr_t') is not allowed"));
-#else
   EXPECT_THAT(
       Eval("(std::nullptr_t)1"),
       IsError("C-style cast from 'int' to 'std::nullptr_t' is not allowed"));
   EXPECT_THAT(
       Eval("(std::nullptr_t)ap"),
       IsError("C-style cast from 'int *' to 'std::nullptr_t' is not allowed"));
-#endif
 }
 
 TEST_F(EvalTest, TestCStyleCastNullptrType) {
@@ -1547,15 +1476,10 @@ TEST_F(EvalTest, TestCxxStaticCast) {
   EXPECT_THAT(Eval("static_cast<td_int_t>(4)"), IsEqual("4"));
   EXPECT_THAT(Eval("static_cast<int>(td_int)"), IsEqual("13"));
 
-#ifndef __EMSCRIPTEN__
-  EXPECT_THAT(
-      Eval("static_cast<long long>(nullptr)"),
-      IsError("static_cast from 'nullptr_t' to 'long long' is not allowed"));
-#else
   EXPECT_THAT(Eval("static_cast<long long>(nullptr)"),
               IsError("static_cast from 'std::nullptr_t' to 'long long' is not "
                       "allowed"));
-#endif
+
   EXPECT_THAT(
       Eval("static_cast<long long>(ptr)"),
       IsError("static_cast from 'int *' to 'long long' is not allowed"));
@@ -1579,15 +1503,10 @@ TEST_F(EvalTest, TestCxxStaticCast) {
   EXPECT_THAT(Eval("static_cast<SEnum>(td_senum)"), IsEqual("kSOne"));
   EXPECT_THAT(Eval("static_cast<td_senum_t>(UEnum::kUOne)"), IsEqual("kSOne"));
 
-#ifndef __EMSCRIPTEN__
-  EXPECT_THAT(
-      Eval("static_cast<UEnum>(nullptr)"),
-      IsError("static_cast from 'nullptr_t' to 'UEnum' is not allowed"));
-#else
   EXPECT_THAT(
       Eval("static_cast<UEnum>(nullptr)"),
       IsError("static_cast from 'std::nullptr_t' to 'UEnum' is not allowed"));
-#endif
+
   EXPECT_THAT(Eval("static_cast<UEnum>(ptr)"),
               IsError("static_cast from 'int *' to 'UEnum' is not allowed"));
   EXPECT_THAT(
@@ -1614,21 +1533,13 @@ TEST_F(EvalTest, TestCxxStaticCast) {
               IsEqual(Is32Bit() ? "0x00000000" : "0x0000000000000000"));
   EXPECT_THAT(Eval("static_cast<std::nullptr_t>(0)"),
               IsEqual(Is32Bit() ? "0x00000000" : "0x0000000000000000"));
-#ifndef __EMSCRIPTEN__
-  EXPECT_THAT(Eval("static_cast<std::nullptr_t>((int)0)"),
-              IsError("static_cast from 'int' to 'std::nullptr_t' (aka "
-                      "'nullptr_t') is not allowed"));
-  EXPECT_THAT(Eval("static_cast<std::nullptr_t>((void*)0)"),
-              IsError("static_cast from 'void *' to 'std::nullptr_t' (aka "
-                      "'nullptr_t') is not allowed"));
-#else
+
   EXPECT_THAT(
       Eval("static_cast<std::nullptr_t>((int)0)"),
       IsError("static_cast from 'int' to 'std::nullptr_t' is not allowed"));
   EXPECT_THAT(
       Eval("static_cast<std::nullptr_t>((void*)0)"),
       IsError("static_cast from 'void *' to 'std::nullptr_t' is not allowed"));
-#endif
 
   // Cast to references.
   EXPECT_THAT(Eval("static_cast<int&>(parent.b)"), IsEqual("2"));
@@ -1816,20 +1727,6 @@ TEST_F(EvalTest, TestCxxReinterpretCast) {
               IsEqual("8589934593"));  // 8589934593 == 0x0000000200000001
 
   // Casting to nullptr_t or nullptr_t to pointer types isn't allowed.
-#ifndef __EMSCRIPTEN__
-  EXPECT_THAT(
-      Eval("reinterpret_cast<void*>(nullptr)"),
-      IsError("reinterpret_cast from 'nullptr_t' to 'void *' is not allowed"));
-  EXPECT_THAT(Eval("reinterpret_cast<std::nullptr_t>(ptr)"),
-              IsError("reinterpret_cast from 'int *' to 'std::nullptr_t' (aka "
-                      "'nullptr_t') is not allowed"));
-  EXPECT_THAT(Eval("reinterpret_cast<std::nullptr_t>(0)"),
-              IsError("reinterpret_cast from 'int' to 'std::nullptr_t' (aka "
-                      "'nullptr_t') is not allowed"));
-  EXPECT_THAT(Eval("reinterpret_cast<std::nullptr_t>(nullptr)"),
-              IsError("reinterpret_cast from 'nullptr_t' to 'std::nullptr_t' "
-                      "(aka 'nullptr_t') is not allowed"));
-#else
   EXPECT_THAT(
       Eval("reinterpret_cast<void*>(nullptr)"),
       IsError("reinterpret_cast from 'std::nullptr_t' to 'void *' is not "
@@ -1845,7 +1742,6 @@ TEST_F(EvalTest, TestCxxReinterpretCast) {
               IsError("reinterpret_cast from 'std::nullptr_t' to "
                       "'std::nullptr_t' "
                       "is not allowed"));
-#endif
 
   // L-values can be converted to reference type.
   EXPECT_THAT(Eval("reinterpret_cast<CxxBase&>(arr[0]).a"), IsEqual("1"));
@@ -2813,7 +2709,7 @@ TEST_F(EvalTest, TestPrefixIncDec) {
 #ifndef __EMSCRIPTEN__
   ASSERT_TRUE(CreateContextVariableArray("int", "$arr", "{1,2,3}"));
   EXPECT_THAT(EvalWithContext("++$arr", vars_),
-              IsError("cannot increment value of type 'int [3]'"));
+              IsError("cannot increment value of type 'int[3]'"));
 
   ASSERT_TRUE(CreateContextVariable("$enum_foo", "ScopedEnum::kFoo"));
   EXPECT_THAT(EvalWithContext("++$enum_foo", vars_),
@@ -2857,7 +2753,7 @@ TEST_F(EvalTest, TestPostfixIncDec) {
 #ifndef __EMSCRIPTEN__
   ASSERT_TRUE(CreateContextVariableArray("int", "$arr", "{1,2,3}"));
   EXPECT_THAT(EvalWithContext("$arr--", vars_),
-              IsError("cannot decrement value of type 'int [3]'"));
+              IsError("cannot decrement value of type 'int[3]'"));
 
   ASSERT_TRUE(CreateContextVariable("$enum_foo", "ScopedEnum::kFoo"));
   EXPECT_THAT(EvalWithContext("$enum_foo++", vars_),
@@ -2981,7 +2877,7 @@ TEST_F(EvalTest, TestAssignment) {
 
   ASSERT_TRUE(CreateContextVariableArray("float", "$farr", "{1.f, 2.f}"));
   EXPECT_THAT(EvalWithContext("$p = $farr", vars_),
-              IsError("no known conversion from 'float [2]' to 'int *'"));
+              IsError("no known conversion from 'float[2]' to 'int *'"));
 #endif
 }
 
