@@ -2020,14 +2020,9 @@ TEST_F(EvalTest, TestTemplateTypes) {
   EXPECT_THAT(Eval("(ns::T_1<ns::T_1<int> >*)p"), IsEqual(expected));
   EXPECT_THAT(Eval("(::ns::T_1<ns::T_1<int> >*)p"), IsEqual(expected));
 #endif
-#ifdef _WIN32
   EXPECT_THAT(
       Eval("ns::T_1<ns::T_1<int> >::cx"),
       IsError("use of undeclared identifier 'ns::T_1<ns::T_1<int> >::cx'"));
-#else
-  EXPECT_THAT(Eval("ns::T_1<ns::T_1<int> >::cx"), IsEqual("46"));
-#endif
-
   EXPECT_THAT(Eval("T_1<int>::cx"), IsEqual("24"));
   EXPECT_THAT(Eval("T_1<double>::cx"), IsEqual("42"));
   EXPECT_THAT(Eval("ns::T_1<int>::cx"), IsEqual("64"));
@@ -2042,10 +2037,17 @@ TEST_F(EvalTest, TestTemplateTypes) {
     EXPECT_THAT(Eval("(::ns::T_1<" + arg + ">::myint)1.1"), IsEqual("1"));
     EXPECT_THAT(Eval("(ns::T_1<T_1<" + arg + "> >::myint)1.1"), IsEqual("1"));
     EXPECT_THAT(Eval("(::ns::T_1<T_1<" + arg + "> >::myint)1.1"), IsEqual("1"));
+  }
+
+  EXPECT_THAT(Eval("(ns::T_1<ns::T_1<int> >::myint)1.1"),
+              IsError("use of undeclared identifier 'ns::T_1<ns::T_1<int> >::myint'"));
+  EXPECT_THAT(Eval("(::ns::T_1<ns::T_1<int> >::myint)1.1"),
+              IsError("use of undeclared identifier '::ns::T_1<ns::T_1<int> >::myint'"));
+  for (std::string arg : {"int*", "int**", "int&", "int*&"}) {
     EXPECT_THAT(Eval("(ns::T_1<ns::T_1<" + arg + "> >::myint)1.1"),
-                IsEqual("1"));
+                IsError("use of undeclared identifier 'ns::T_1'"));
     EXPECT_THAT(Eval("(::ns::T_1<ns::T_1<" + arg + "> >::myint)1.1"),
-                IsEqual("1"));
+                IsError("use of undeclared identifier '::ns::T_1'"));
   }
 
   EXPECT_THAT(Eval("(T_2<int, char>::myint)1.1f"), IsEqual("1.10000002"));
