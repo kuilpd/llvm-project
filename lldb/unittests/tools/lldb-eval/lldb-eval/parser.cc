@@ -3016,6 +3016,12 @@ ExprResult Parser::BuildUnaryOp(UnaryOpKind kind, ExprResult rhs,
   switch (kind) {
     case UnaryOpKind::Deref: {
       if (rhs_type->IsPointerType()) {
+        if (rhs_type->IsPointerToVoid())
+          BailOut(
+              ErrorCode::kInvalidOperandType,
+              llvm::formatv("indirection not permitted on operand of type "
+                            "'void *'"),
+              location);
         result_type = rhs_type->GetPointeeType();
       } else if (rhs_type->IsSmartPtrType()) {
         rhs = InsertSmartPtrToPointerConversion(std::move(rhs));
