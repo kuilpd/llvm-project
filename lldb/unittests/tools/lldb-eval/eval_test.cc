@@ -849,7 +849,9 @@ TEST_F(EvalTest, TestPointerDereference) {
 
   EXPECT_THAT(Eval("&p_void[0]"),
               IsError("subscript of pointer to incomplete type 'void'"));
-  EXPECT_THAT(Eval("&*p_void"), IsOk());
+  EXPECT_THAT(Eval("&*p_void"),
+              IsError("indirection not permitted on operand of type"
+                      " 'void *'"));
   EXPECT_THAT(Eval("&pp_void0[2]"), IsOk());
 
   EXPECT_THAT(Eval("**pp_int0"), IsEqual("0"));
