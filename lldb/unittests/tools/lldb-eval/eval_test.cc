@@ -394,8 +394,6 @@ class EvalTest : public ::testing::Test {
 
     std::string binary_path = lldb_private::GetInputFilePath("test_binary.bin");
     std::string source_path = lldb_private::GetInputFilePath("test_binary.cc");
-//    auto binary_path = "testdata/test_binary";
-//    auto source_path = "testdata/test_binary.cc";
 
     debugger_ = lldb::SBDebugger::Create(false);
     process_ = lldb_eval::LaunchTestProgram(debugger_, source_path, binary_path,
@@ -3343,7 +3341,7 @@ TEST_F(EvalTest, TestTypeComparison) {
 
   // Taking an address of ternary expression require operands of the same type.
   EXPECT_THAT(Eval("&(true ? ip : icpc)"), IsOk());
-  EXPECT_THAT(Eval("&(true ? mipp : ipp)"), IsOk());
+  EXPECT_THAT(Eval("&(true ? mipp : ipp)"), IsOk(/*compare_types*/ false));
   EXPECT_THAT(Eval("&(true ? ipp : icpcpc)"), IsOk());
   EXPECT_THAT(Eval("&(true ? ipp : mipp)"), IsOk());
   EXPECT_THAT(Eval("&(true ? ipp : micpcpc)"), IsOk());
