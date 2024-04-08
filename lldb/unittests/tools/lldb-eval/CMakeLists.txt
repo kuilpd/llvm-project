@@ -34,7 +34,8 @@ add_lldb_unittest(LLDBEvalTests
   )
 
 set(test_inputs
-  test_binary.bin
+  test_binary_libc++.bin
+  test_binary_libstdc++.bin
   test_binary.cc
   )
 add_unittest_inputs(LLDBEvalTests "${test_inputs}")

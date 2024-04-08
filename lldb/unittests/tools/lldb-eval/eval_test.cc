@@ -392,7 +392,7 @@ class EvalTest : public ::testing::Test {
         ::testing::UnitTest::GetInstance()->current_test_info()->name();
     std::string break_line = "// BREAK(" + test_name + ")";
 
-    std::string binary_path = lldb_private::GetInputFilePath("test_binary.bin");
+    std::string binary_path = lldb_private::GetInputFilePath("test_binary_libc++.bin");
     std::string source_path = lldb_private::GetInputFilePath("test_binary.cc");
 
     debugger_ = lldb::SBDebugger::Create(false);
