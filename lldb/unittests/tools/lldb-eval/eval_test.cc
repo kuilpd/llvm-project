@@ -1394,17 +1394,19 @@ TEST_F(EvalTest, TestCStyleCastPointer) {
   EXPECT_THAT(Eval("(int&*)ap"), IsError("'type name' declared as a pointer "
                                          "to a reference of type 'int &'"));
 
-  EXPECT_THAT(Eval("(std::nullptr_t)nullptr"),
+  EXPECT_THAT(Eval("(nullptr_t)nullptr"),
               IsEqual(Is32Bit() ? "0x00000000" : "0x0000000000000000"));
-  EXPECT_THAT(Eval("(std::nullptr_t)0"),
+  EXPECT_THAT(Eval("(nullptr_t)0"),
               IsEqual(Is32Bit() ? "0x00000000" : "0x0000000000000000"));
 
   EXPECT_THAT(
-      Eval("(std::nullptr_t)1"),
-      IsError("C-style cast from 'int' to 'std::nullptr_t' is not allowed"));
+      Eval("(nullptr_t)1"),
+      IsError("C-style cast from 'int' to 'nullptr_t' (aka 'std::nullptr_t')"
+              " is not allowed"));
   EXPECT_THAT(
-      Eval("(std::nullptr_t)ap"),
-      IsError("C-style cast from 'int *' to 'std::nullptr_t' is not allowed"));
+      Eval("(nullptr_t)ap"),
+      IsError("C-style cast from 'int *' to 'nullptr_t' (aka 'std::nullptr_t')"
+              " is not allowed"));
 }
 
 TEST_F(EvalTest, TestCStyleCastNullptrType) {
@@ -1529,17 +1531,19 @@ TEST_F(EvalTest, TestCxxStaticCast) {
               IsError("static_cast from 'int *' to 'float *' is not allowed"));
 
   // Cast to nullptr.
-  EXPECT_THAT(Eval("static_cast<std::nullptr_t>(nullptr)"),
+  EXPECT_THAT(Eval("static_cast<nullptr_t>(nullptr)"),
               IsEqual(Is32Bit() ? "0x00000000" : "0x0000000000000000"));
-  EXPECT_THAT(Eval("static_cast<std::nullptr_t>(0)"),
+  EXPECT_THAT(Eval("static_cast<nullptr_t>(0)"),
               IsEqual(Is32Bit() ? "0x00000000" : "0x0000000000000000"));
 
   EXPECT_THAT(
-      Eval("static_cast<std::nullptr_t>((int)0)"),
-      IsError("static_cast from 'int' to 'std::nullptr_t' is not allowed"));
+      Eval("static_cast<nullptr_t>((int)0)"),
+      IsError("static_cast from 'int' to 'nullptr_t' (aka 'std::nullptr_t')"
+              " is not allowed"));
   EXPECT_THAT(
-      Eval("static_cast<std::nullptr_t>((void*)0)"),
-      IsError("static_cast from 'void *' to 'std::nullptr_t' is not allowed"));
+      Eval("static_cast<nullptr_t>((void*)0)"),
+      IsError("static_cast from 'void *' to 'nullptr_t' (aka 'std::nullptr_t')"
+              " is not allowed"));
 
   // Cast to references.
   EXPECT_THAT(Eval("static_cast<int&>(parent.b)"), IsEqual("2"));
@@ -1732,16 +1736,15 @@ TEST_F(EvalTest, TestCxxReinterpretCast) {
       IsError("reinterpret_cast from 'std::nullptr_t' to 'void *' is not "
               "allowed"));
   EXPECT_THAT(
-      Eval("reinterpret_cast<std::nullptr_t>(ptr)"),
-      IsError("reinterpret_cast from 'int *' to 'std::nullptr_t' is not "
-              "allowed"));
-  EXPECT_THAT(Eval("reinterpret_cast<std::nullptr_t>(0)"),
-              IsError("reinterpret_cast from 'int' to 'std::nullptr_t' is "
-                      "not allowed"));
-  EXPECT_THAT(Eval("reinterpret_cast<std::nullptr_t>(nullptr)"),
-              IsError("reinterpret_cast from 'std::nullptr_t' to "
-                      "'std::nullptr_t' "
-                      "is not allowed"));
+      Eval("reinterpret_cast<nullptr_t>(ptr)"),
+      IsError("reinterpret_cast from 'int *' to 'nullptr_t' "
+              "(aka 'std::nullptr_t') is not allowed"));
+  EXPECT_THAT(Eval("reinterpret_cast<nullptr_t>(0)"),
+              IsError("reinterpret_cast from 'int' to 'nullptr_t' "
+                      "(aka 'std::nullptr_t') is not allowed"));
+  EXPECT_THAT(Eval("reinterpret_cast<nullptr_t>(nullptr)"),
+              IsError("reinterpret_cast from 'std::nullptr_t' to 'nullptr_t' "
+                      "(aka 'std::nullptr_t') is not allowed"));
 
   // L-values can be converted to reference type.
   EXPECT_THAT(Eval("reinterpret_cast<CxxBase&>(arr[0]).a"), IsEqual("1"));
