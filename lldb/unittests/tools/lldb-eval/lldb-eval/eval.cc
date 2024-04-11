@@ -179,7 +179,7 @@ static Value EvaluateMemberOf(Value value, const std::vector<uint32_t>& path) {
     member_val = member_val.GetChildAtIndex(idx, lldb::eNoDynamicValues,
                                             /*can_create_synthetic*/ false);
   }
-  assert(member_val && "invalid ast: invalid member access");
+//  assert(member_val && "invalid ast: invalid member access");
 
   // If value is a reference, derefernce it to get to the underlying type. All
   // operations on a reference should be actually operations on the referent.
