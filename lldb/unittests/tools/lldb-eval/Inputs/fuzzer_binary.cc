@@ -22,7 +22,7 @@
 
 // Returns the floor log base 2. This function is supported in lldb-eval and is
 // defined here so it can be used via LLDB.
-unsigned int __log2(unsigned int value) {
+unsigned int __log2_32(unsigned int value) {
   std::cout << "fuz: " << value << std::endl;
 //  if (value >> 31 == 1)
 //    return -1;
