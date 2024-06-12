@@ -623,7 +623,7 @@ static std::unique_ptr<BuiltinFunctionDef> GetBuiltinFunctionDef(
   //
   //   Calculates the log2(x).
   //
-  if (identifier == "__log2") {
+  if (identifier == "__log2" || identifier == "__log2_32") {
     TypeSP return_type = ctx.GetBasicType(lldb::eBasicTypeUnsignedInt);
     std::vector<TypeSP> arguments = {
         ctx.GetBasicType(lldb::eBasicTypeUnsignedInt),

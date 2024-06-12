@@ -417,7 +417,7 @@ void Interpreter::Visit(const SizeOfNode* node) {
 }
 
 void Interpreter::Visit(const BuiltinFunctionCallNode* node) {
-  if (node->name() == "__log2") {
+  if (node->name() == "__log2" || node->name() == "__log2_32") {
     assert(node->arguments().size() == 1 &&
            "invalid ast: expected exactly one argument to `__log2`");
     // Get the first (and the only) argument and evaluate it.

@@ -195,7 +195,7 @@ fuzzer::SymbolTable gen_symtab(EvaluationContext& eval_ctx,
   }
 
   // Add functions.
-  symtab.add_function(fuzzer::ScalarType::UnsignedInt, "__log2",
+  symtab.add_function(fuzzer::ScalarType::UnsignedInt, "__log2_32",
                       {fuzzer::ScalarType::UnsignedInt});
 
   return symtab;
