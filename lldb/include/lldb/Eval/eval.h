@@ -21,10 +21,10 @@
 #include <vector>
 
 #include "clang/Basic/TokenKinds.h"
-#include "lldb-eval/ast.h"
-#include "lldb-eval/context.h"
-#include "lldb-eval/defines.h"
-#include "lldb-eval/value.h"
+#include "lldb/Eval/ast.h"
+#include "lldb/Eval/context.h"
+#include "lldb/Eval/defines.h"
+#include "lldb/Eval/value.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBTarget.h"

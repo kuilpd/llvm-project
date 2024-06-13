@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "lldb-eval/parser.h"
+#include "lldb/Eval/parser.h"
 
 #include <stdlib.h>
 
@@ -38,8 +38,8 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/Token.h"
-#include "lldb-eval/ast.h"
-#include "lldb-eval/defines.h"
+#include "lldb/Eval/ast.h"
+#include "lldb/Eval/defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"

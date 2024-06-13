@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "lldb-eval/context.h"
+#include "lldb/Eval/context.h"
 
 #include <memory>
 #include <string>
@@ -23,7 +23,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
-#include "lldb-eval/value.h"
+#include "lldb/Eval/value.h"
 #include "lldb/API/SBExecutionContext.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBProcess.h"

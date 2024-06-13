@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "lldb-eval/api.h"
+#include "lldb/Eval/api.h"
 
 #include <cassert>
 #include <memory>
 #include <string>
 #include <unordered_map>
 
-#include "lldb-eval/context.h"
-#include "lldb-eval/eval.h"
-#include "lldb-eval/parser.h"
-#include "lldb-eval/parser_context.h"
-#include "lldb-eval/value.h"
+#include "lldb/Eval/context.h"
+#include "lldb/Eval/eval.h"
+#include "lldb/Eval/parser.h"
+#include "lldb/Eval/parser_context.h"
+#include "lldb/Eval/value.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBExecutionContext.h"
 #include "lldb/API/SBFrame.h"
