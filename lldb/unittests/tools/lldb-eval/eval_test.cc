@@ -21,11 +21,11 @@
 #include <unordered_map>
 
 #include "TestingSupport/TestUtilities.h"
-#include "lldb-eval/api.h"
-#include "lldb-eval/ast.h"
-#include "lldb-eval/context.h"
-#include "lldb-eval/runner.h"
-#include "lldb-eval/traits.h"
+#include "lldb/Eval/api.h"
+#include "lldb/Eval/ast.h"
+#include "lldb/Eval/context.h"
+#include "lldb/Eval/runner.h"
+#include "lldb/Eval/traits.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBProcess.h"

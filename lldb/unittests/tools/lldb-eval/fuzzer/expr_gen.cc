@@ -27,7 +27,7 @@
 #include <unordered_set>
 #include <variant>
 
-#include "lldb-eval/defines.h"
+#include "lldb/Eval/defines.h"
 #include "fuzzer/ast.h"
 #include "fuzzer/constraints.h"
 #include "fuzzer/enum_bitset.h"
