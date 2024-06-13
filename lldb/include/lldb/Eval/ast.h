@@ -24,8 +24,8 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
-#include "lldb-eval/parser_context.h"
-#include "lldb-eval/type.h"
+#include "lldb/Eval/parser_context.h"
+#include "lldb/Eval/type.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 

@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "lldb-eval/value.h"
+#include "lldb/Eval/value.h"
 
 #include <cmath>
 
-#include "lldb-eval/context.h"
-#include "lldb-eval/defines.h"
-#include "lldb-eval/traits.h"
+#include "lldb/Eval/context.h"
+#include "lldb/Eval/defines.h"
+#include "lldb/Eval/traits.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
@@ -94,7 +94,7 @@ bool LLDBType::CompareTo(TypeSP other) {
   }
 
   // Comparing two lldb::SBType doesn't always work reliably:
-  // https://github.com/google/lldb-eval/blob/master/docs/lldb-bugs.md#comparing-lldbsbtype-objects-representing-the-same-type-doesnt-always-work
+  // https://github.com/google/lldb/Eval/blob/master/docs/lldb-bugs.md#comparing-lldbsbtype-objects-representing-the-same-type-doesnt-always-work
 
   // In LLDB the type name is stored as `llvm_private::ConstString`, which
   // points to global pool of unique strings. The equal names will point to the

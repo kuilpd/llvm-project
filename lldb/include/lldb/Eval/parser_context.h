@@ -2,7 +2,7 @@
 #define LLDB_EVAL_PARSER_CONTEXT_H_
 
 #include "clang/Basic/SourceManager.h"
-#include "lldb-eval/type.h"
+#include "lldb/Eval/type.h"
 #include "lldb/lldb-enumerations.h"
 
 namespace lldb_eval {

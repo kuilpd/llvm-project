@@ -31,8 +31,8 @@
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/Preprocessor.h"
-#include "lldb-eval/ast.h"
-#include "lldb-eval/parser_context.h"
+#include "lldb/Eval/ast.h"
+#include "lldb/Eval/parser_context.h"
 
 namespace lldb_eval {
 

@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "lldb-eval/ast.h"
+#include "lldb/Eval/ast.h"
 
-#include "lldb-eval/defines.h"
+#include "lldb/Eval/defines.h"
 
 namespace lldb_eval {
 

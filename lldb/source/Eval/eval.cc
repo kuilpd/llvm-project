@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "lldb-eval/eval.h"
+#include "lldb/Eval/eval.h"
 
 #include <memory>
 
 #include "clang/Basic/TokenKinds.h"
-#include "lldb-eval/ast.h"
-#include "lldb-eval/context.h"
-#include "lldb-eval/value.h"
+#include "lldb/Eval/ast.h"
+#include "lldb/Eval/context.h"
+#include "lldb/Eval/value.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"

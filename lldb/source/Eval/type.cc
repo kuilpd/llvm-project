@@ -1,6 +1,6 @@
-#include "lldb-eval/type.h"
+#include "lldb/Eval/type.h"
 
-#include "lldb-eval/traits.h"
+#include "lldb/Eval/traits.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
