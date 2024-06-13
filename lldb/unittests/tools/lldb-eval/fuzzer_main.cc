@@ -24,8 +24,8 @@
 #include <utility>
 
 #include "cpp-linenoise/linenoise.hpp"
-#include "lldb-eval/api.h"
-#include "lldb-eval/runner.h"
+#include "lldb/Eval/api.h"
+#include "lldb/Eval/runner.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBError.h"
@@ -41,7 +41,7 @@
 #include "fuzzer/symbol_table.h"
 
 static constexpr char SOURCE_PATH_KEY[] = "/home/ikuklin/dev/git/kuilpd-llvm-project/lldb/unittests/tools/lldb-eval/Inputs/fuzzer_binary.cc";
-static constexpr char BINARY_PATH_KEY[] = "/home/ikuklin/dev/git/kuilpd-llvm-project/lldb/unittests/tools/lldb-eval/Inputs/fuzzer_binary";
+static constexpr char BINARY_PATH_KEY[] = "/home/ikuklin/dev/git/kuilpd-llvm-project/lldb/unittests/tools/lldb-eval/Inputs/fuzzer_binary.bin";
 
 enum Verbosity {
   ShowMismatchesOrErrors,

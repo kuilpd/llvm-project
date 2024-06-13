@@ -20,7 +20,7 @@
 #include <optional>
 #include <string>
 
-#include "lldb-eval/traits.h"
+#include "lldb/Eval/traits.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBMemoryRegionInfo.h"

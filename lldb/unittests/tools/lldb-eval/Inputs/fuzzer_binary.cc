@@ -15,7 +15,6 @@
  */
 
 #include <limits>
-#include <iostream>
 
 // This file _must not_ access the file system, since the current directory
 // is specified in the fuzzer as just `./`.
@@ -23,9 +22,6 @@
 // Returns the floor log base 2. This function is supported in lldb-eval and is
 // defined here so it can be used via LLDB.
 unsigned int __log2_32(unsigned int value) {
-  std::cout << "fuz: " << value << std::endl;
-//  if (value >> 31 == 1)
-//    return -1;
   unsigned int leading_zeros = 0;
   for (int bit = 31; bit >= 0; --bit) {
     if (value & (1U << bit)) {
