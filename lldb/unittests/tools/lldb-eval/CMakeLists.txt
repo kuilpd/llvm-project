@@ -1,4 +1,3 @@
-add_llvm_tool_subdirectory(testfuzz)
 
 add_lldb_unittest(LLDBEvalTests
   eval_test.cc
@@ -10,64 +9,57 @@ add_lldb_unittest(LLDBEvalTests
     LLVMTestingSupport
   )
 
-add_lldb_unittest(LLDBEvalMutateTests
+add_lldb_library(lldbEvalFuzzer
   fuzzer/ast.cc
   fuzzer/constraints.cc
   fuzzer/expr_gen.cc
   fuzzer/fixed_rng.cc
   fuzzer/gen_node.cc
   fuzzer/symbol_table.cc
+
+  LINK_LIBS
+    liblldb
+    lldbEval
+  )
+
+add_lldb_unittest(LLDBEvalMutateTests
   mutate_test.cc
 
   LINK_LIBS
     liblldb
     lldbEval
+    lldbEvalFuzzer
     lldbUtilityHelpers
     LLVMTestingSupport
   )
 
 add_lldb_unittest(LLDBEvalUtilsTests
-  fuzzer/ast.cc
-  fuzzer/constraints.cc
-  fuzzer/expr_gen.cc
-  fuzzer/fixed_rng.cc
-  fuzzer/gen_node.cc
-  fuzzer/symbol_table.cc
   libfuzzer_utils_test.cc
 
   LINK_LIBS
     liblldb
     lldbEval
+    lldbEvalFuzzer
   )
 
 add_lldb_unittest(LLDBEvalSymbolTableTests
-  fuzzer/ast.cc
-  fuzzer/constraints.cc
-  fuzzer/expr_gen.cc
-  fuzzer/fixed_rng.cc
-  fuzzer/gen_node.cc
-  fuzzer/symbol_table.cc
   symbol_table_test.cc
 
   LINK_LIBS
     liblldb
     lldbEval
+    lldbEvalFuzzer
     lldbUtilityHelpers
     LLVMTestingSupport
   )
 
 add_lldb_unittest(LLDBEvalFuzzerTests
-  fuzzer/ast.cc
-  fuzzer/constraints.cc
-  fuzzer/expr_gen.cc
-  fuzzer/fixed_rng.cc
-  fuzzer/gen_node.cc
-  fuzzer/symbol_table.cc
   fuzzer_test.cc
 
   LINK_LIBS
     liblldb
     lldbEval
+    lldbEvalFuzzer
   )
 
 set(test_lib
@@ -85,12 +77,6 @@ add_unittest_inputs(LLDBEvalSymbolTableTests "${test_fuzzer}")
 
 
 add_lldb_tool(lldb-eval-fuzzer
-  fuzzer/ast.cc
-  fuzzer/constraints.cc
-  fuzzer/expr_gen.cc
-  fuzzer/fixed_rng.cc
-  fuzzer/gen_node.cc
-  fuzzer/symbol_table.cc
   fuzzer_main.cc
 
   CLANG_LIBS
@@ -100,4 +86,7 @@ add_lldb_tool(lldb-eval-fuzzer
   LINK_LIBS
     liblldb
     lldbEval
+    lldbEvalFuzzer
   )
+
+
