@@ -5,7 +5,7 @@
 #include <memory>
 #include <sstream>
 
-#include "lldb-eval/runner.h"
+#include "lldb/Eval/runner.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBProcess.h"
@@ -76,7 +76,7 @@ void write_node(std::shared_ptr<GenNode> root, ByteWriter& writer) {
 int LibfuzzerState::init(int* /*argc*/, char*** argv) {
   lldb::SBDebugger::Initialize();
 
-  auto binary_path = "/home/ikuklin/dev/git/kuilpd-llvm-project/lldb/unittests/tools/lldb-eval/Inputs/fuzzer_binary";
+  auto binary_path = "/home/ikuklin/dev/git/kuilpd-llvm-project/lldb/unittests/tools/lldb-eval/Inputs/fuzzer_binary.bin";
   auto source_path = "/home/ikuklin/dev/git/kuilpd-llvm-project/lldb/unittests/tools/lldb-eval/Inputs/fuzzer_binary.cc";
 
   debugger_ = lldb::SBDebugger::Create(false);
@@ -91,7 +91,7 @@ int LibfuzzerState::init(int* /*argc*/, char*** argv) {
       frame_, /*ignore_qualified_types*/ true);
 
   // Add lldb-eval functions.
-  symtab_.add_function(ScalarType::UnsignedInt, "__log2",
+  symtab_.add_function(ScalarType::UnsignedInt, "__log2_32",
                        {ScalarType::UnsignedInt});
 
   return 0;

@@ -1,3 +1,4 @@
+add_subdirectory(libfuzzer_test)
 
 add_lldb_unittest(LLDBEvalTests
   eval_test.cc
@@ -15,6 +16,7 @@ add_lldb_library(lldbEvalFuzzer
   fuzzer/expr_gen.cc
   fuzzer/fixed_rng.cc
   fuzzer/gen_node.cc
+  fuzzer/libfuzzer_common.cc
   fuzzer/symbol_table.cc
 
   LINK_LIBS
