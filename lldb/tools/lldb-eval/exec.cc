@@ -18,7 +18,7 @@
 #include <string>
 
 #include "cpp-linenoise/linenoise.hpp"
-#include "lldb-eval/api.h"
+#include "lldb/Eval/api.h"
 #include "lldb-eval/runner.h"
 #include "lldb/API/SBExpressionOptions.h"
 #include "lldb/API/SBFrame.h"
