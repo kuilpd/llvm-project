@@ -25,6 +25,7 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
+#include "lldb/Eval/api.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Type.h"
@@ -594,10 +595,17 @@ lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
   lldb::ValueObjectSP new_value_sp;
   if (value_sp) {
     ExecutionContext exe_ctx(value_sp->GetExecutionContextRef());
-    new_value_sp = ValueObject::CreateValueObjectFromExpression(
-        name, expression, exe_ctx, options.ref());
-    if (new_value_sp)
+
+    lldb::SBError eval_error;
+    eval_error = lldb_eval::EvaluateExpression(expression, exe_ctx, new_value_sp);
+    if (!eval_error)
       new_value_sp->SetName(ConstString(name));
+    else {
+      new_value_sp = ValueObject::CreateValueObjectFromExpression(
+          name, expression, exe_ctx, options.ref());
+      if (new_value_sp)
+        new_value_sp->SetName(ConstString(name));
+    }
   }
   sb_value.SetSP(new_value_sp);
   return sb_value;
