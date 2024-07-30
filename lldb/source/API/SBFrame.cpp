@@ -20,6 +20,7 @@
 #include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Core/ValueObjectConstResult.h"
+#include "lldb/Eval/api.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/Host.h"
@@ -44,6 +45,7 @@
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBError.h"
 #include "lldb/API/SBExpressionOptions.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBStream.h"
@@ -1029,6 +1031,36 @@ SBValue SBFrame::EvaluateExpression(const char *expr) {
     else
       options.SetLanguage(frame->GetLanguage());
     return EvaluateExpression(expr, options);
+  } else {
+    Status error;
+    error.SetErrorString("can't evaluate expressions when the "
+                           "process is running.");
+    ValueObjectSP error_val_sp = ValueObjectConstResult::Create(nullptr, error);
+    result.SetSP(error_val_sp, false);
+  }
+  return result;
+}
+
+SBValue SBFrame::EvalExpression(const char *expr) {
+  LLDB_INSTRUMENT_VA(this, expr);
+
+  SBValue result;
+  std::unique_lock<std::recursive_mutex> lock;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+
+  StackFrame *frame = exe_ctx.GetFramePtr();
+  Target *target = exe_ctx.GetTargetPtr();
+
+  if (frame && target) {
+    lldb::SBError eval_error;
+    result = lldb_eval::EvaluateExpression(*this, expr, eval_error);
+    if (eval_error) {
+      Status error;
+      error.SetErrorString(eval_error.GetCString());
+      ValueObjectSP error_val_sp = ValueObjectConstResult::Create(nullptr, error);
+      result.SetSP(error_val_sp, false);
+    }
+    return result;
   } else {
     Status error;
     error.SetErrorString("can't evaluate expressions when the "

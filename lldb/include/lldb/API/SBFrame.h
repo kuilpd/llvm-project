@@ -107,6 +107,7 @@ public:
   /// The version that doesn't supply a 'use_dynamic' value will use the
   /// target's default.
   lldb::SBValue EvaluateExpression(const char *expr);
+  lldb::SBValue EvalExpression(const char *expr);
 
   lldb::SBValue EvaluateExpression(const char *expr,
                                    lldb::DynamicValueType use_dynamic);
