@@ -420,19 +420,6 @@ public:
   /// SBValue::GetNumChildren() returns 0
   lldb::SBValue GetVTable();
 
-protected:
-  friend class SBBlock;
-  friend class SBFrame;
-  friend class SBModule;
-  friend class SBTarget;
-  friend class SBThread;
-  friend class SBTypeSummary;
-  friend class SBValueList;
-
-  friend class lldb_private::python::SWIGBridge;
-
-  SBValue(const lldb::ValueObjectSP &value_sp);
-
   /// Same as the protected version of GetSP that takes a locker, except that we
   /// make the
   /// locker locally in the function.  Since the Target API mutex is recursive,
@@ -470,6 +457,19 @@ protected:
   ///     A ValueObjectSP of the best kind (static, dynamic or synthetic) we
   ///     can cons up, in accordance with the SBValue's settings.
   lldb::ValueObjectSP GetSP(ValueLocker &value_locker) const;
+
+protected:
+  friend class SBBlock;
+  friend class SBFrame;
+  friend class SBModule;
+  friend class SBTarget;
+  friend class SBThread;
+  friend class SBTypeSummary;
+  friend class SBValueList;
+
+  friend class lldb_private::python::SWIGBridge;
+
+  SBValue(const lldb::ValueObjectSP &value_sp);
 
   // these calls do the right thing WRT adjusting their settings according to
   // the target's preferences
