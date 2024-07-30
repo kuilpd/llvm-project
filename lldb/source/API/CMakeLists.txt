@@ -130,6 +130,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
     lldbBreakpoint
     lldbCore
     lldbDataFormatters
+    lldbEval
     lldbExpression
     lldbHost
     lldbInitialization
