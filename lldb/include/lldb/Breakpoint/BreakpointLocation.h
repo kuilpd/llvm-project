@@ -15,6 +15,7 @@
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Breakpoint/StoppointHitCounter.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Eval/api.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
@@ -135,6 +136,8 @@ public:
   ///    A pointer to the condition expression text, or nullptr if no
   //     condition has been set.
   const char *GetConditionText(size_t *hash = nullptr) const;
+
+  bool ConditionSaysStopViaEval(ExecutionContext &exe_ctx, Status &error);
 
   bool ConditionSaysStop(ExecutionContext &exe_ctx, Status &error);
 
@@ -359,6 +362,8 @@ private:
   lldb::break_id_t m_loc_id; ///< Breakpoint location ID.
   StoppointHitCounter m_hit_counter; ///< Number of times this breakpoint
                                      /// location has been hit.
+
+  std::shared_ptr<lldb_eval::CompiledExpr> m_parsed_expr;
 
   void SetShouldResolveIndirectFunctions(bool do_resolve) {
     m_should_resolve_indirect_functions = do_resolve;

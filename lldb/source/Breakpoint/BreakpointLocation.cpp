@@ -231,6 +231,52 @@ const char *BreakpointLocation::GetConditionText(size_t *hash) const {
       .GetConditionText(hash);
 }
 
+
+bool BreakpointLocation::ConditionSaysStopViaEval(ExecutionContext &exe_ctx,
+                                                  Status &error) {
+  std::lock_guard<std::mutex> guard(m_condition_mutex);
+
+  size_t condition_hash;
+  const char *condition_text = GetConditionText(&condition_hash);
+
+  if (!condition_text) {
+    m_user_expression_sp.reset();
+    return false;
+  }
+
+  error.Clear();
+
+  if (condition_hash != m_condition_hash) {
+    lldb::SBError parse_error;
+    m_parsed_expr = lldb_eval::ParseExpression(condition_text, exe_ctx, parse_error);
+    if (parse_error.GetError()) {
+      error.SetErrorString(parse_error.GetCString());
+      return false;
+    }
+    m_condition_hash = condition_hash;
+  }
+  if (!m_parsed_expr) {
+    error.SetErrorString(
+        "Expression was not parsed before evaluation");
+    return false;
+  }
+  ValueObjectSP result_valobj_sp;
+  lldb::SBError eval_error = lldb_eval::EvaluateParsedExpression(m_parsed_expr, exe_ctx,
+                                                                 result_valobj_sp);
+  bool condition_says_stop = false;
+  if (eval_error.GetError()) {
+    error.SetErrorString(eval_error.GetCString());
+  } else {
+    condition_says_stop = result_valobj_sp->IsLogicalTrue(error);
+    if (!error.Success()) {
+      error.SetErrorString(
+          "Failed to get an integer result from the expression");
+      condition_says_stop = false;
+    }
+  }
+  return condition_says_stop;
+}
+
 bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
                                            Status &error) {
   Log *log = GetLog(LLDBLog::Breakpoints);
