@@ -941,6 +941,8 @@ public:
   ///     An error if a Trace already exists or the trace couldn't be created.
   lldb::SBTrace CreateTrace(SBError &error);
 
+  SBTarget(const lldb::TargetSP &target_sp);
+
 protected:
   friend class SBAddress;
   friend class SBAddressRange;
@@ -967,8 +969,6 @@ protected:
 
   // Constructors are private, use static Target::Create function to create an
   // instance of this class.
-
-  SBTarget(const lldb::TargetSP &target_sp);
 
   lldb::TargetSP GetSP() const;
 
