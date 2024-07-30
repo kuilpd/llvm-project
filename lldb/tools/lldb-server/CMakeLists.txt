@@ -44,6 +44,7 @@ add_lldb_tool(lldb-server
     SystemInitializerLLGS.cpp
 
     LINK_LIBS
+      liblldb
       lldbHost
       lldbInitialization
       lldbVersion
