@@ -213,4 +213,43 @@ lldb::SBValue EvaluateExpression(lldb::SBValue scope,
                                 Value(scope), error);
 }
 
+lldb::SBError EvaluateExpression(const char* expr,
+                                 lldb_private::ExecutionContext &exe_ctx,
+                                 lldb::ValueObjectSP &result_valobj_sp)
+{
+  lldb::SBTarget sbtarget(exe_ctx.GetTargetSP());
+  auto sbframe = sbtarget.GetProcess().GetSelectedThread().GetSelectedFrame();
+  lldb_eval::Options opts;
+  lldb::SBError lldb_eval_error;
+  auto sbval = lldb_eval::EvaluateExpression(sbframe, expr, opts, lldb_eval_error);
+  result_valobj_sp = sbval.GetSP();
+  return lldb_eval_error;
+}
+
+std::shared_ptr<CompiledExpr> ParseExpression(const char* expr,
+                                              lldb_private::ExecutionContext &exe_ctx,
+                                              lldb::SBError &error) {
+
+  lldb::SBTarget sbtarget(exe_ctx.GetTargetSP());
+  auto sbframe = sbtarget.GetProcess().GetSelectedThread().GetSelectedFrame();
+  lldb_eval::Options opts;
+
+  auto source = SourceManager::Create(expr);
+  auto context = Context::Create(source, sbframe);
+  return CompileExpressionImpl(source, context, opts, lldb::SBType(), error);
+}
+
+lldb::SBError EvaluateParsedExpression(std::shared_ptr<CompiledExpr> parsed_expr,
+                                       lldb_private::ExecutionContext &exe_ctx,
+                                       lldb::ValueObjectSP &result_valobj_sp)
+{
+  lldb::SBTarget sbtarget(exe_ctx.GetTargetSP());
+  lldb_eval::Options opts;
+  lldb::SBError lldb_eval_error;
+  auto sbval = lldb_eval::EvaluateExpressionImpl(parsed_expr, opts.context_vars, sbtarget,
+                                                 Value(), lldb_eval_error);
+  result_valobj_sp = sbval.GetSP();
+  return lldb_eval_error;
+}
+
 }  // namespace lldb_eval

@@ -22,6 +22,7 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValue.h"
+#include "lldb/Target/ExecutionContext.h"
 
 #ifdef _MSC_VER
 #if LLDB_EVAL_LINKED_AS_SHARED_LIBRARY
@@ -128,6 +129,21 @@ lldb::SBValue EvaluateExpression(lldb::SBValue scope,
                                  std::shared_ptr<CompiledExpr> expression,
                                  ContextVariableList context_vars,
                                  lldb::SBError& error);
+
+LLDB_EVAL_API
+lldb::SBError EvaluateExpression(const char* expr,
+                                 lldb_private::ExecutionContext &exe_ctx,
+                                 lldb::ValueObjectSP &result_valobj_sp);
+
+LLDB_EVAL_API
+std::shared_ptr<CompiledExpr> ParseExpression(const char* expr,
+                                              lldb_private::ExecutionContext &exe_ctx,
+                                              lldb::SBError &error);
+
+LLDB_EVAL_API
+lldb::SBError EvaluateParsedExpression(std::shared_ptr<CompiledExpr> parsed_expr,
+                                       lldb_private::ExecutionContext &exe_ctx,
+                                       lldb::ValueObjectSP &result_valobj_sp);
 
 }  // namespace lldb_eval
 

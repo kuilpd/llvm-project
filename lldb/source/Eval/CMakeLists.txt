@@ -12,7 +12,12 @@ add_lldb_library(lldbEval NO_PLUGIN_DEPENDENCIES
   LINK_LIBS
     clangBasic
     clangLex
-    liblldb
+    lldbCore
+    lldbHost
+    lldbInterpreter
+    lldbSymbol
+    lldbTarget
+    lldbUtility
 
   LINK_COMPONENTS
     Support
