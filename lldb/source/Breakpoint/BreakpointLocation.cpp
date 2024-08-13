@@ -234,21 +234,15 @@ const char *BreakpointLocation::GetConditionText(size_t *hash) const {
 
 bool BreakpointLocation::ConditionSaysStopViaEval(ExecutionContext &exe_ctx,
                                                   Status &error) {
-  std::lock_guard<std::mutex> guard(m_condition_mutex);
-
   size_t condition_hash;
   const char *condition_text = GetConditionText(&condition_hash);
-
-  if (!condition_text) {
-    m_user_expression_sp.reset();
-    return false;
-  }
 
   error.Clear();
 
   if (condition_hash != m_condition_hash) {
     lldb::SBError parse_error;
-    m_parsed_expr = lldb_eval::ParseExpression(condition_text, exe_ctx, parse_error);
+    m_parsed_expr = lldb_eval::ParseExpression(condition_text, exe_ctx,
+                                               parse_error);
     if (parse_error.GetError()) {
       error.SetErrorString(parse_error.GetCString());
       return false;
@@ -261,8 +255,9 @@ bool BreakpointLocation::ConditionSaysStopViaEval(ExecutionContext &exe_ctx,
     return false;
   }
   ValueObjectSP result_valobj_sp;
-  lldb::SBError eval_error = lldb_eval::EvaluateParsedExpression(m_parsed_expr, exe_ctx,
-                                                                 result_valobj_sp);
+  lldb::SBError eval_error =
+      lldb_eval::EvaluateParsedExpression(m_parsed_expr, exe_ctx,
+                                          result_valobj_sp);
   bool condition_says_stop = false;
   if (eval_error.GetError()) {
     error.SetErrorString(eval_error.GetCString());
@@ -289,6 +284,14 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
   if (!condition_text) {
     m_user_expression_sp.reset();
     return false;
+  }
+
+  if (exe_ctx.GetTargetSP()->GetUseEvalForExpressions() && eval_parse_success) {
+    bool eval_result = ConditionSaysStopViaEval(exe_ctx, error);
+    if (error.Success())
+      return eval_result;
+    eval_parse_success = false;
+    m_condition_hash = 0;
   }
 
   error.Clear();

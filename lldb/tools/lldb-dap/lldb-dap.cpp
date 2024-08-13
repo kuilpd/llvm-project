@@ -1326,12 +1326,8 @@ void request_evaluate(const llvm::json::Object &request) {
     if (value.GetError().Success() && context == "repl")
       value = value.Persist();
 
-    if (value.GetError().Fail() && context != "hover") {
-      value = frame.EvalExpression(expression.data());
-      if (value.GetError().Fail())
-        // Eval failed, fall back to LLDB expression evaluation
-        value = frame.EvaluateExpression(expression.data());
-    }
+    if (value.GetError().Fail() && context != "hover")
+      value = frame.EvaluateExpression(expression.data());
 
     if (value.GetError().Fail()) {
       response["success"] = llvm::json::Value(false);

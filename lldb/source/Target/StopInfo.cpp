@@ -449,7 +449,7 @@ protected:
             else {
               Status condition_error;
               bool condition_says_stop =
-                  bp_loc_sp->ConditionSaysStopViaEval(exe_ctx, condition_error);
+                  bp_loc_sp->ConditionSaysStop(exe_ctx, condition_error);
 
               if (!condition_error.Success()) {
                 // If the condition fails to evaluate, we are going to stop 

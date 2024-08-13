@@ -596,11 +596,13 @@ lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
   if (value_sp) {
     ExecutionContext exe_ctx(value_sp->GetExecutionContextRef());
 
-    lldb::SBError eval_error;
-    eval_error = lldb_eval::EvaluateExpression(expression, exe_ctx, new_value_sp);
-    if (!eval_error)
-      new_value_sp->SetName(ConstString(name));
-    else {
+    if (exe_ctx.GetTargetSP()->GetUseEvalForExpressions()) {
+      lldb::SBError eval_error;
+      eval_error = lldb_eval::EvaluateExpression(expression, exe_ctx, new_value_sp);
+      if (!eval_error)
+        new_value_sp->SetName(ConstString(name));
+    }
+    if (!new_value_sp) {
       new_value_sp = ValueObject::CreateValueObjectFromExpression(
           name, expression, exe_ctx, options.ref());
       if (new_value_sp)
