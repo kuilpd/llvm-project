@@ -33,6 +33,8 @@ It can be built normally either as a part of [LLVM](https://lldb.llvm.org/resour
 ```
 Further setting for launch configurations can be found on the [plugin page](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.lldb-dap).
 
+3. You can disable using `lldb-eval` for evaluating expression by adding `settings set target.use-eval-for-expressions false` to `.lldbinit`
+
 ## Performance
 You should expect the speedup in expression evaluation to be anywhere from 10 to 60 times, depending on the complexity of the expression and the amount of debug information. Usually, the longer the expression and the larger debug information amount are, the faster the execution is relative to default LLDB implementation.
 Examples:
