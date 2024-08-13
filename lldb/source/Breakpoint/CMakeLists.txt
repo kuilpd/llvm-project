@@ -27,7 +27,9 @@ add_lldb_library(lldbBreakpoint NO_PLUGIN_DEPENDENCIES
   WatchpointResource.cpp
 
   LINK_LIBS
+    lldbApi
     lldbCore
+    lldbEval
     lldbExpression
     lldbInterpreter
     lldbSymbol

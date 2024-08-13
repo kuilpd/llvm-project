@@ -137,8 +137,6 @@ public:
   //     condition has been set.
   const char *GetConditionText(size_t *hash = nullptr) const;
 
-  bool ConditionSaysStopViaEval(ExecutionContext &exe_ctx, Status &error);
-
   bool ConditionSaysStop(ExecutionContext &exe_ctx, Status &error);
 
   /// Set the valid thread to be checked when the breakpoint is hit.
@@ -316,6 +314,8 @@ private:
 
   void UndoBumpHitCount();
 
+  bool ConditionSaysStopViaEval(ExecutionContext &exe_ctx, Status &error);
+
   /// Updates the thread ID internally.
   ///
   /// This method was created to handle actually mutating the thread ID
@@ -373,6 +373,7 @@ private:
   StoppointHitCounter m_hit_counter; ///< Number of times this breakpoint
                                      /// location has been hit.
 
+  bool eval_parse_success = true;
   std::shared_ptr<lldb_eval::CompiledExpr> m_parsed_expr;
 
   void SetShouldResolveIndirectFunctions(bool do_resolve) {
