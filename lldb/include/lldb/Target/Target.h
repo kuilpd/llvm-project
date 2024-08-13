@@ -258,6 +258,10 @@ public:
 
   bool GetDebugUtilityExpression() const;
 
+  void SetUseEvalForExpressions(bool debug);
+
+  bool GetUseEvalForExpressions() const;
+
 private:
   // Callbacks for m_launch_info.
   void Arg0ValueChangedCallback();
