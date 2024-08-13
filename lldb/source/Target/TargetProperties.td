@@ -201,6 +201,9 @@ let Definition = "target" in {
   def DebugUtilityExpression: Property<"debug-utility-expression", "Boolean">,
     DefaultFalse,
     Desc<"Enable debugging of LLDB-internal utility expressions.">;
+  def UseEvalForExpressions: Property<"use-eval-for-expressions", "Boolean">,
+    DefaultTrue,
+    Desc<"Enable using lldb-eval for expression evaluation.">;
 }
 
 let Definition = "process_experimental" in {

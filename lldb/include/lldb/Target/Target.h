@@ -261,6 +261,10 @@ public:
 
   bool GetDebugUtilityExpression() const;
 
+  void SetUseEvalForExpressions(bool debug);
+
+  bool GetUseEvalForExpressions() const;
+
 private:
   std::optional<bool>
   GetExperimentalPropertyValue(size_t prop_idx,
