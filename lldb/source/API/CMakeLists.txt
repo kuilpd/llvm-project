@@ -119,6 +119,88 @@ add_lldb_library(liblldb SHARED ${option_framework}
   ${option_install_prefix}
 )
 
+add_lldb_library(lldbApi NO_PLUGIN_DEPENDENCIES
+  SBAddress.cpp
+  SBAttachInfo.cpp
+  SBBlock.cpp
+  SBBreakpoint.cpp
+  SBBreakpointLocation.cpp
+  SBBreakpointName.cpp
+  SBBreakpointOptionCommon.cpp
+  SBBroadcaster.cpp
+  SBCommandInterpreter.cpp
+  SBCommandInterpreterRunOptions.cpp
+  SBCommandReturnObject.cpp
+  SBCommunication.cpp
+  SBCompileUnit.cpp
+  SBData.cpp
+  SBDebugger.cpp
+  SBDeclaration.cpp
+  SBEnvironment.cpp
+  SBError.cpp
+  SBEvent.cpp
+  SBExecutionContext.cpp
+  SBExpressionOptions.cpp
+  SBFileSpec.cpp
+  SBFile.cpp
+  SBFileSpecList.cpp
+  SBFormat.cpp
+  SBFrame.cpp
+  SBFunction.cpp
+  SBHostOS.cpp
+  SBInstruction.cpp
+  SBInstructionList.cpp
+  SBLanguageRuntime.cpp
+  SBLaunchInfo.cpp
+  SBLineEntry.cpp
+  SBListener.cpp
+  SBMemoryRegionInfo.cpp
+  SBMemoryRegionInfoList.cpp
+  SBModule.cpp
+  SBModuleSpec.cpp
+  SBPlatform.cpp
+  SBProcess.cpp
+  SBProcessInfo.cpp
+  SBProcessInfoList.cpp
+  SBQueue.cpp
+  SBQueueItem.cpp
+  SBReproducer.cpp
+  SBScriptObject.cpp
+  SBSection.cpp
+  SBSourceManager.cpp
+  SBStream.cpp
+  SBStringList.cpp
+  SBStructuredData.cpp
+  SBSymbol.cpp
+  SBSymbolContext.cpp
+  SBSymbolContextList.cpp
+  SBTarget.cpp
+  SBThread.cpp
+  SBThreadCollection.cpp
+  SBThreadPlan.cpp
+  SBTrace.cpp
+  SBTraceCursor.cpp
+  SBType.cpp
+  SBTypeCategory.cpp
+  SBTypeEnumMember.cpp
+  SBTypeFilter.cpp
+  SBTypeFormat.cpp
+  SBTypeNameSpecifier.cpp
+  SBTypeSummary.cpp
+  SBTypeSynthetic.cpp
+  SBValue.cpp
+  SBValueList.cpp
+  SBVariablesOptions.cpp
+  SBWatchpoint.cpp
+  SBWatchpointOptions.cpp
+  SBUnixSignals.cpp
+  ${lldb_python_wrapper}
+  ${lldb_lua_wrapper}
+
+  LINK_COMPONENTS
+    Support
+  )
+
 # lib/pythonX.Y/dist-packages/lldb/_lldb.so is a symlink to lib/liblldb.so,
 # which depends on lib/libLLVM*.so (BUILD_SHARED_LIBS) or lib/libLLVM-10git.so
 # (LLVM_LINK_LLVM_DYLIB). Add an additional rpath $ORIGIN/../../../../lib so
