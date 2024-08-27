@@ -18,7 +18,13 @@ This project adds:
 5. Fuzzers, which can be built by adding `-DLLVM_USE_SANITIZE_COVERAGE=On` to the CMake configuration.
 
 ## Building
-It can be built normally either as a part of [LLVM](https://lldb.llvm.org/resources/build.html) or a [standalone LLDB build](https://lldb.llvm.org/resources/build.html).
+The project can be built normally by addling `lldb` to the list of enabled projects while building [LLVM](https://lldb.llvm.org/resources/build.html).
+
+In order for unit tests to work properly, it has to be linked against libc++ 18.0.0.
+```
+-DLLVM_ENABLE_PROJECTS='clang;lldb'
+-DLLVM_ENABLE_LIBCXX=On
+```
 
 ## Usage
 1. Use `lldb-eval` tool to quickly launch a binary and stop at a breakpoint to try out expression evaluation and compare `lldb-eval` results to LLDB.
