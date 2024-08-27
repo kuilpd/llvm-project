@@ -77,7 +77,7 @@ bool Type::IsSmartPtrType() {
   static llvm::Regex k_libcxx_std_weak_ptr_regex(
       "^std::__[[:alnum:]]+::weak_ptr<.+>(( )?&)?$");
 
-  llvm::StringRef name = GetName();
+  llvm::StringRef name = GetCanonicalType()->GetName();
   return k_libcxx_std_unique_ptr_regex.match(name) ||
          k_libcxx_std_shared_ptr_regex.match(name) ||
          k_libcxx_std_weak_ptr_regex.match(name);
