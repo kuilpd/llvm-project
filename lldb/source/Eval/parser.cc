@@ -2322,7 +2322,8 @@ ExprResult Parser::ParseFloatingLiteral(clang::NumericLiteralParser& literal,
                                          ? llvm::APFloat::IEEEsingle()
                                          : llvm::APFloat::IEEEdouble();
   llvm::APFloat raw_value(format);
-  llvm::APFloat::opStatus result = literal.GetFloatValue(raw_value);
+  auto RM = llvm::APFloat::rmNearestTiesToEven;
+  llvm::APFloat::opStatus result = literal.GetFloatValue(raw_value, RM);
 
   // Overflow is always an error, but underflow is only an error if we
   // underflowed to zero (APFloat reports denormals as underflow).

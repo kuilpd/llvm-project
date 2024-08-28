@@ -2442,15 +2442,15 @@ void SymbolFileDWARF::FindGlobalVariables(
   // If we don't have enough matches and the variable context is not empty, try
   // to resolve the context as a type and look for static const members.
   if (variables.GetSize() - original_size < max_matches && !context.empty()) {
-    llvm::StringRef type_scope;
     llvm::StringRef type_name;
-    TypeClass type_class;
-    if (!Type::GetTypeScopeAndBasename(context, type_scope, type_name,
-                                       type_class))
+    if (std::optional<Type::ParsedName> parsed_name =
+        Type::GetTypeScopeAndBasename(name))
+      type_name = parsed_name->basename;
+    else
       type_name = context;
 
     m_index->GetTypes(ConstString(type_name), [&](DWARFDIE parent) {
-      llvm::StringRef parent_type_name = GetDWARFDeclContext(parent)
+      llvm::StringRef parent_type_name = parent.GetDWARFDeclContext()
                                              .GetQualifiedNameAsConstString()
                                              .GetStringRef();
 
@@ -3479,7 +3479,7 @@ VariableSP SymbolFileDWARF::ParseStaticConstMemberDIE(
 
   if (Language::LanguageIsCPlusPlus(GetLanguage(*die.GetCU())))
     mangled =
-        GetDWARFDeclContext(die).GetQualifiedNameAsConstString().GetCString();
+        die.GetDWARFDeclContext().GetQualifiedNameAsConstString().GetCString();
 
   ValueType scope = eValueTypeVariableGlobal;
   Variable::RangeList scope_ranges;

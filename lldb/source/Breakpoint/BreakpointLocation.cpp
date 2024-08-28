@@ -236,13 +236,13 @@ bool BreakpointLocation::ConditionSaysStopViaEval(ExecutionContext &exe_ctx,
     m_parsed_expr = lldb_eval::ParseExpression(condition_text, exe_ctx,
                                                parse_error);
     if (parse_error.GetError()) {
-      error.SetErrorString(parse_error.GetCString());
+      error = Status::FromErrorString(parse_error.GetCString());
       return false;
     }
     m_condition_hash = condition_hash;
   }
   if (!m_parsed_expr) {
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "Expression was not parsed before evaluation");
     return false;
   }
@@ -252,11 +252,11 @@ bool BreakpointLocation::ConditionSaysStopViaEval(ExecutionContext &exe_ctx,
                                           result_valobj_sp);
   bool condition_says_stop = false;
   if (eval_error.GetError()) {
-    error.SetErrorString(eval_error.GetCString());
+    error = Status::FromErrorString(eval_error.GetCString());
   } else {
     condition_says_stop = result_valobj_sp->IsLogicalTrue(error);
     if (!error.Success()) {
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "Failed to get an integer result from the expression");
       condition_says_stop = false;
     }
