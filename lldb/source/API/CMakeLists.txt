@@ -148,6 +148,8 @@ add_lldb_library(liblldb SHARED ${option_framework}
 
 add_lldb_library(lldbApi NO_PLUGIN_DEPENDENCIES
   SBAddress.cpp
+  SBAddressRange.cpp
+  SBAddressRangeList.cpp
   SBAttachInfo.cpp
   SBBlock.cpp
   SBBreakpoint.cpp
@@ -160,6 +162,7 @@ add_lldb_library(lldbApi NO_PLUGIN_DEPENDENCIES
   SBCommandReturnObject.cpp
   SBCommunication.cpp
   SBCompileUnit.cpp
+  SBSaveCoreOptions.cpp
   SBData.cpp
   SBDebugger.cpp
   SBDeclaration.cpp
@@ -195,6 +198,7 @@ add_lldb_library(lldbApi NO_PLUGIN_DEPENDENCIES
   SBScriptObject.cpp
   SBSection.cpp
   SBSourceManager.cpp
+  SBStatisticsOptions.cpp
   SBStream.cpp
   SBStringList.cpp
   SBStructuredData.cpp
@@ -221,6 +225,7 @@ add_lldb_library(lldbApi NO_PLUGIN_DEPENDENCIES
   SBWatchpoint.cpp
   SBWatchpointOptions.cpp
   SBUnixSignals.cpp
+  SystemInitializerFull.cpp
   ${lldb_python_wrapper}
   ${lldb_lua_wrapper}
 
