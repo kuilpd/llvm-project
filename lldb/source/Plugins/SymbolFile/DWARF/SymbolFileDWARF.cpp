@@ -2444,7 +2444,7 @@ void SymbolFileDWARF::FindGlobalVariables(
   if (variables.GetSize() - original_size < max_matches && !context.empty()) {
     llvm::StringRef type_name;
     if (std::optional<Type::ParsedName> parsed_name =
-        Type::GetTypeScopeAndBasename(name))
+        Type::GetTypeScopeAndBasename(context))
       type_name = parsed_name->basename;
     else
       type_name = context;
@@ -3460,6 +3460,8 @@ VariableSP SymbolFileDWARF::ParseStaticConstMemberDIE(
       break;
     case DW_AT_const_value:
       const_value_form = form_value;
+      break;
+    default:
       break;
     }
   }
