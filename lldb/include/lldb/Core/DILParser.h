@@ -16,6 +16,9 @@
 #include <vector>
 
 #include "clang/Basic/FileManager.h"
+#include "lldb/Core/DILAST.h"
+#include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/Utility/Status.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
@@ -23,9 +26,6 @@
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/Preprocessor.h"
-#include "lldb/Core/DILAST.h"
-#include "lldb/Target/ExecutionContextScope.h"
-#include "lldb/Utility/Status.h"
 
 namespace lldb_private {
 

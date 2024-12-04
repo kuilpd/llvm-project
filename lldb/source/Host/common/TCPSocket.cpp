@@ -240,7 +240,8 @@ llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>>
 TCPSocket::Accept(MainLoopBase &loop,
                   std::function<void(std::unique_ptr<Socket> socket)> sock_cb) {
   if (m_listen_sockets.size() == 0)
-    return llvm::createStringError("No open listening sockets!");
+    return llvm::createStringError(llvm::inconvertibleErrorCode(), 
+        "No open listening sockets!");
 
   std::vector<MainLoopBase::ReadHandleUP> handles;
   for (auto socket : m_listen_sockets) {

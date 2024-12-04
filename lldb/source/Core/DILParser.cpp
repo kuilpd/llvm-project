@@ -24,6 +24,9 @@
 #include <type_traits>
 #include <vector>
 
+#include "lldb/Core/DILAST.h"
+#include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/lldb-enumerations.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -38,9 +41,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/Token.h"
-#include "lldb/lldb-enumerations.h"
-#include "lldb/Core/DILAST.h"
-#include "lldb/Target/ExecutionContextScope.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -1029,7 +1029,7 @@ ParseResult DILParser::Run(Status& error) {
 
   Expect(clang::tok::eof);
 
-  error = m_error;
+  error = m_error.Clone();
   m_error.Clear();
 
   // Explicitly return DILErrorNode if there was an error during the parsing.
@@ -4324,10 +4324,10 @@ void DILParser::BailOut(ErrorCode code, const std::string& error,
     return;
   }
 
-  m_error.SetError ((uint32_t) code, lldb::eErrorTypeGeneric);
+  m_error = Status((uint32_t) code, lldb::eErrorTypeGeneric);
   //  m_error.SetErrorString(FormatDiagnostics(m_smff, error, loc));
-  m_error.SetErrorString(FormatDiagnostics(m_sm->GetSourceManager(), error,
-                                           loc));
+  m_error = Status::FromErrorString(FormatDiagnostics(m_sm->GetSourceManager(), error,
+                                           loc).c_str());
   m_token.setKind(clang::tok::eof);
 }
 

@@ -998,7 +998,8 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
 
 llvm::Expected<std::string> ValueObject::GetObjectDescription() {
   if (!UpdateValueIfNeeded(true))
-    return llvm::createStringError("could not update value");
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+        "could not update value");
 
   // Return cached value.
   if (!m_object_desc_str.empty())
@@ -1007,7 +1008,8 @@ llvm::Expected<std::string> ValueObject::GetObjectDescription() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   Process *process = exe_ctx.GetProcessPtr();
   if (!process)
-    return llvm::createStringError("no process");
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+        "no process");
 
   // Returns the object description produced by one language runtime.
   auto get_object_description =
@@ -1019,7 +1021,8 @@ llvm::Expected<std::string> ValueObject::GetObjectDescription() {
       m_object_desc_str = s.GetString();
       return m_object_desc_str;
     }
-    return llvm::createStringError("no native language runtime");
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+        "no native language runtime");
   };
 
   // Try the native language runtime first.

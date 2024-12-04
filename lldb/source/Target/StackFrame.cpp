@@ -527,7 +527,7 @@ ValueObjectSP StackFrame::DILEvaluateVariableExpression(
   DILParser parser(source, shared_from_this(), use_dynamic, !no_synth_child);
   ParseResult tree = parser.Run(parse_error);
   if (parse_error.Fail()) {
-    error = parse_error;
+    error = parse_error.Clone();
     return ValueObjectSP();
   }
 
@@ -537,7 +537,7 @@ ValueObjectSP StackFrame::DILEvaluateVariableExpression(
 
   ret_val = interpreter.DILEval(tree.get(), target, eval_error);
   if (eval_error.Fail()) {
-    error = eval_error;
+    error = eval_error.Clone();
     return ValueObjectSP();
   }
 

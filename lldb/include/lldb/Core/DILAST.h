@@ -15,7 +15,7 @@
 #include <variant>
 #include <vector>
 
-#include "lldb/Core/ValueObject.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Target/LanguageRuntime.h"
