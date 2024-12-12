@@ -15,7 +15,7 @@ This project adds:
    * Creating values from expression in LLDB's [Custom Data Formatters](https://github.com/vadimcn/codelldb/wiki/Custom-Data-Formatters) by using Python and CreateValueFromExpression API function.
    * Explicit expression evaluation for watched expressions in an IDE.
 4. Unit tests for testing `lldb-eval` functionality.
-5. Fuzzers, which can be built by adding `-DLLVM_USE_SANITIZE_COVERAGE=On` to the CMake configuration.
+5. Fuzzers, which can be built by adding `-DLLVM_USE_SANITIZER=Address -DLLVM_USE_SANITIZE_COVERAGE=On` to the CMake configuration.
 
 ## Building
 The project can be built normally by addling `lldb` to the list of enabled projects while building [LLVM](https://lldb.llvm.org/resources/build.html).
