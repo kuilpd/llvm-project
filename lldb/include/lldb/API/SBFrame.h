@@ -122,6 +122,9 @@ public:
   lldb::SBValue EvaluateExpression(const char *expr,
                                    const SBExpressionOptions &options);
 
+  lldb::SBValue EvaluateExpressionViaDIL(const char *expr,
+                                   lldb::DynamicValueType use_dynamic);
+
   /// Language plugins can use this API to report language-specific
   /// runtime information about this compile unit, such as additional
   /// language version details or feature flags.
