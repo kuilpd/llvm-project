@@ -16,6 +16,8 @@
 #include "fuzzer/fixed_rng.h"
 #include "fuzzer/gen_node.h"
 #include "fuzzer/symbol_table.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Path.h"
 
 namespace fuzzer {
 
@@ -76,13 +78,16 @@ void write_node(std::shared_ptr<GenNode> root, ByteWriter& writer) {
 int LibfuzzerState::init(int* /*argc*/, char*** argv) {
   lldb::SBDebugger::Initialize();
 
-  auto binary_path = "/home/ikuklin/dev/git/kuilpd-llvm-project/lldb/tools/lldb-fuzzer/lldb-DIL-fuzzer/Inputs/fuzzer_binary.bin";
-  auto source_path = "/home/ikuklin/dev/git/kuilpd-llvm-project/lldb/tools/lldb-fuzzer/lldb-DIL-fuzzer/Inputs/fuzzer_binary.cc";
+  llvm::SmallString<256> current(__FILE__);
+  llvm::sys::path::remove_filename(current);
+  auto parent = llvm::sys::path::parent_path(current.str());
+  auto binary_path = std::string((parent + "/Inputs/fuzzer_binary.bin").str());
+  auto source_path = std::string((parent + "/Inputs/fuzzer_binary.cc").str());
 
   debugger_ = lldb::SBDebugger::Create(false);
 
   lldb::SBProcess process = LaunchTestProgram(
-      debugger_, source_path, binary_path, "// BREAK HERE");
+      debugger_, source_path.c_str(), binary_path.c_str(), "// BREAK HERE");
 
   target_ = process.GetTarget();
   frame_ = process.GetSelectedThread().GetSelectedFrame();
