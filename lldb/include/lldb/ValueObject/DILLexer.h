@@ -27,6 +27,7 @@ public:
     amp,
     arrow,
     coloncolon,
+    colon,
     eof,
     float_constant,
     identifier,
