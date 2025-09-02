@@ -126,7 +126,7 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
 //  postfix_expression:
 //    primary_expression
 //    postfix_expression "[" expression "]"
-//    postfix_expression "[" expression "-" expression "]"
+//    postfix_expression "[" expression ":" expression "]"
 //    postfix_expression "." id_expression
 //    postfix_expression "->" id_expression
 //
@@ -139,7 +139,7 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
     case Token::l_square: {
       m_dil_lexer.Advance();
       ASTNodeUP index = ParseExpression();
-      if (CurToken().GetKind() == Token::minus) {
+      if (CurToken().GetKind() == Token::colon) {
         m_dil_lexer.Advance();
         ASTNodeUP last_index = ParseExpression();
         lhs = std::make_unique<BitFieldExtractionNode>(
