@@ -9,6 +9,7 @@
 #ifndef LLDB_VALUEOBJECT_DILAST_H
 #define LLDB_VALUEOBJECT_DILAST_H
 
+#include "lldb/ValueObject/DILLexer.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -19,6 +20,7 @@ namespace lldb_private::dil {
 /// The various types DIL AST nodes (used by the DIL parser).
 enum class NodeKind {
   eArraySubscriptNode,
+  eBinaryOpNode,
   eBitExtractionNode,
   eErrorNode,
   eFloatLiteralNode,
@@ -35,6 +37,15 @@ enum class UnaryOpKind {
   Minus,  // "-"
   Plus,   // "+"
 };
+
+/// The binary operators recognized by DIL.
+enum class BinaryOpKind {
+  Add, // "+"
+  Sub, // "-"
+};
+
+/// Translates DIL tokens to BinaryOpKind.
+BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind);
 
 /// Forward declaration, for use in DIL AST nodes. Definition is at the very
 /// end of this file.
@@ -57,6 +68,8 @@ public:
   virtual ~ASTNode() = default;
 
   virtual llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const = 0;
+
+  virtual bool IsConstLiteral() const { return false; }
 
   uint32_t GetLocation() const { return m_location; }
   NodeKind GetKind() const { return m_kind; }
@@ -138,6 +151,29 @@ private:
   ASTNodeUP m_operand;
 };
 
+class BinaryOpNode : public ASTNode {
+public:
+  BinaryOpNode(uint32_t location, BinaryOpKind kind, ASTNodeUP lhs,
+               ASTNodeUP rhs)
+      : ASTNode(location, NodeKind::eBinaryOpNode), m_kind(kind),
+        m_lhs(std::move(lhs)), m_rhs(std::move(rhs)) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  BinaryOpKind GetKind() const { return m_kind; }
+  ASTNode *GetLHS() const { return m_lhs.get(); }
+  ASTNode *GetRHS() const { return m_rhs.get(); }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eBinaryOpNode;
+  }
+
+private:
+  BinaryOpKind m_kind;
+  ASTNodeUP m_lhs;
+  ASTNodeUP m_rhs;
+};
+
 class ArraySubscriptNode : public ASTNode {
 public:
   ArraySubscriptNode(uint32_t location, ASTNodeUP base, ASTNodeUP index)
@@ -194,6 +230,7 @@ public:
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
+  bool IsConstLiteral() const override { return true; }
   const llvm::APInt &GetValue() const { return m_value; }
   uint32_t GetRadix() const { return m_radix; }
   bool IsUnsigned() const { return m_is_unsigned; }
@@ -218,6 +255,7 @@ public:
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
+  bool IsConstLiteral() const override { return true; }
   const llvm::APFloat &GetValue() const { return m_value; }
 
   static bool classof(const ASTNode *node) {
@@ -241,6 +279,8 @@ public:
   Visit(const MemberOfNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const UnaryOpNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const BinaryOpNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const ArraySubscriptNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>

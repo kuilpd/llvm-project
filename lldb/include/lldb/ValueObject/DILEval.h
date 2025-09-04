@@ -52,6 +52,7 @@ private:
   Visit(const IdentifierNode *node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const MemberOfNode *node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const UnaryOpNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const BinaryOpNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const ArraySubscriptNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
@@ -61,8 +62,25 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const FloatLiteralNode *node) override;
 
+  lldb::ValueObjectSP
+  ConvertValueObjectToTypeSystem(lldb::ValueObjectSP valobj,
+                                 lldb::TypeSystemSP type_system);
   llvm::Expected<lldb::ValueObjectSP>
   UnaryConversion(lldb::ValueObjectSP valobj);
+  llvm::Expected<CompilerType> ArithmeticConversion(lldb::ValueObjectSP lhs,
+                                                    lldb::ValueObjectSP rhs);
+  llvm::Expected<lldb::ValueObjectSP> PointerAdd(lldb::ValueObjectSP ptr,
+                                                 int64_t offset);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateArithmeticOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                       lldb::ValueObjectSP rhs, CompilerType result_type,
+                       uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryAddition(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                         uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinarySubtraction(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                            uint32_t location);
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system,
                   std::shared_ptr<ExecutionContextScope> ctx,

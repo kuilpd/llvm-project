@@ -82,7 +82,28 @@ ASTNodeUP DILParser::Run() {
 //  expression:
 //    unary_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParseUnaryExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParseAdditiveExpression(); }
+
+// Parse an additive_expression.
+//
+//  additive_expression:
+//    unary_expression {"+" unary_expression}
+//    unary_expression {"-" unary_expression}
+//
+ASTNodeUP DILParser::ParseAdditiveExpression() {
+  auto lhs = ParseUnaryExpression();
+
+  while (CurToken().IsOneOf({Token::plus, Token::minus})) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseUnaryExpression();
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
 
 // Parse an unary_expression.
 //

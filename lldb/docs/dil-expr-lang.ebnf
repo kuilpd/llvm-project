@@ -3,7 +3,9 @@
 (* This is currently a subset of the final DIL Language, matching the current
    DIL implementation. *)
 
-expression = unary_expression ;
+expression = additive_expression ;
+
+additive_expression = unary_expression {"+" unary_expression} ;
 
 unary_expression = postfix_expression
                  | unary_operator expression ;
