@@ -495,11 +495,14 @@ Interpreter::EvaluateArithmeticOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
     return ValueObject::CreateValueObjectFromScalar(m_target, result,
                                                     result_type, "result");
   }
-
-  default:
-    return llvm::make_error<DILDiagnosticError>(
-        m_expr, "invalid arithmetic operation", location);
+  case BinaryOpKind::Sub: {
+    Scalar result = l - r;
+    return ValueObject::CreateValueObjectFromScalar(m_target, result,
+                                                    result_type, "result");
   }
+  }
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr, "invalid arithmetic operation", location);
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddition(
@@ -548,6 +551,119 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddition(
   }
 
   return PointerAdd(ptr, offset->GetValueAsUnsigned(0));
+}
+
+static llvm::Expected<CompilerType>
+GetPtrDiffType(std::shared_ptr<ExecutionContextScope> ctx) {
+  lldb::TargetSP target_sp = ctx->CalculateTarget();
+  llvm::Triple triple(
+      llvm::Twine(target_sp->GetArchitecture().GetTriple().str()));
+  lldb::BasicType basic_type;
+  if (triple.isOSWindows()) {
+    basic_type =
+        triple.isArch64Bit() ? lldb::eBasicTypeLongLong : lldb::eBasicTypeInt;
+  } else {
+    basic_type =
+        triple.isArch64Bit() ? lldb::eBasicTypeLong : lldb::eBasicTypeInt;
+  }
+
+  llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU(ctx);
+  if (!type_system)
+    return type_system.takeError();
+  return GetBasicType(*type_system, basic_type);
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operation '-' works for:
+  //
+  //  {scalar,unscoped_enum} <-> {scalar,unscoped_enum}
+  //  pointer <-> {integer,unscoped_enum}
+  //  pointer <-> pointer (if pointee types are compatible)
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (result_type.IsScalarType())
+    return EvaluateArithmeticOp(BinaryOpKind::Sub, lhs, rhs, result_type,
+                                location);
+
+  auto lhs_type = lhs->GetCompilerType();
+  auto rhs_type = rhs->GetCompilerType();
+
+  if (lhs_type.IsPointerType() && rhs_type.IsInteger()) {
+    if (lhs_type.IsPointerToVoid())
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "arithmetic on a pointer to void", location);
+  } else if (lhs_type.IsPointerType() && rhs_type.IsPointerType()) {
+    if (lhs_type.IsPointerToVoid() && rhs_type.IsPointerToVoid()) {
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "arithmetic on a pointer to void", location);
+    }
+
+    // Compare canonical unqualified pointer types.
+    CompilerType lhs_unqualified_type =
+        lhs_type.GetCanonicalType().GetFullyUnqualifiedType();
+    CompilerType rhs_unqualified_type =
+        rhs_type.GetCanonicalType().GetFullyUnqualifiedType();
+    bool comparable = lhs_unqualified_type.CompareTypes(rhs_unqualified_type);
+    if (!comparable) {
+      std::string errMsg = llvm::formatv(
+          "{0} and {1} are not pointers to compatible types",
+          orig_lhs_type.TypeDescription(), orig_rhs_type.TypeDescription());
+      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+    }
+  } else {
+    std::string errMsg = llvm::formatv(
+        "invalid operands to binary expression ('{0}' and '{1}')",
+        orig_lhs_type.TypeDescription(), orig_rhs_type.TypeDescription());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  }
+
+  // "pointer - integer" operation.
+  if (rhs->GetCompilerType().IsInteger())
+    return PointerAdd(lhs, -rhs->GetValueAsUnsigned(0));
+
+  // "pointer - pointer" operation.
+  llvm::Expected<uint64_t> lhs_byte_size =
+      lhs->GetCompilerType().GetPointeeType().GetByteSize(
+          lhs->GetTargetSP().get());
+  if (!lhs_byte_size)
+    return lhs_byte_size.takeError();
+  llvm::Expected<uint64_t> rhs_byte_size =
+      rhs->GetCompilerType().GetPointeeType().GetByteSize(
+          rhs->GetTargetSP().get());
+  if (!rhs_byte_size)
+    return rhs_byte_size.takeError();
+  // Since pointers have compatible types, both have the same pointee size.
+  int64_t item_size = *lhs_byte_size;
+  int64_t diff = static_cast<int64_t>(lhs->GetValueAsUnsigned(0) -
+                                      rhs->GetValueAsUnsigned(0));
+  if (diff % item_size != 0) {
+    // If address difference isn't divisible by pointee size then performing
+    // the operation is undefined behaviour.
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "undefined pointer arithmetic", location);
+  }
+  diff /= item_size;
+
+  // Pointer difference is ptrdiff_t.
+  // TODO: lookup the actual type ptrdiff_t
+  llvm::Expected<CompilerType> ptrdiff_t = GetPtrDiffType(m_exe_ctx_scope);
+  if (!ptrdiff_t)
+    return ptrdiff_t.takeError();
+  ExecutionContext exe_ctx(m_target.get(), false);
+  llvm::Expected<uint64_t> byte_size = ptrdiff_t->GetByteSize(m_target.get());
+  if (!byte_size)
+    return byte_size.takeError();
+  lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
+      reinterpret_cast<const void *>(&diff), *byte_size, exe_ctx.GetByteOrder(),
+      exe_ctx.GetAddressByteSize());
+  return ValueObject::CreateValueObjectFromData("result", *data_sp, exe_ctx,
+                                                *ptrdiff_t);
 }
 
 lldb::ValueObjectSP
@@ -600,9 +716,8 @@ Interpreter::Visit(const BinaryOpNode *node) {
   switch (node->GetKind()) {
   case BinaryOpKind::Add:
     return EvaluateBinaryAddition(lhs, rhs, node->GetLocation());
-
-  default:
-    break;
+  case BinaryOpKind::Sub:
+    return EvaluateBinarySubtraction(lhs, rhs, node->GetLocation());
   }
 
   return llvm::make_error<DILDiagnosticError>(
