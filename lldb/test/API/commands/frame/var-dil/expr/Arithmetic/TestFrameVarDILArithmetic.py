@@ -42,10 +42,27 @@ class TestFrameVarDILArithmetic(TestBase):
         self.expect_var_path("+bitfield.b", value="2", type="int")
         self.expect_var_path("+bitfield.c", value="3", type="unsigned int")
         self.expect_var_path("+bitfield.d", value="4", type="uint64_t")
-        self.expect_var_path("+array", type="int *")
-        self.expect_var_path("+p", type="int *")
-        self.expect(
-            "frame var -- '-p'",
-            error=True,
-            substrs=["invalid argument type 'int *' to unary expression"],
-        )
+
+        # Check basic math and resulting types
+        self.expect_var_path("1 + 2", value="3", type="int")
+        self.expect_var_path("s + x", value="12", type="int")
+        self.expect_var_path("s + l", value="15", type="long")
+        self.expect_var_path("1.0 + 2.5", value="3.5", type="double")
+        self.expect_var_path("1 + 2.5f", value="3.5", type="float")
+        self.expect_var_path("2. + .5", value="2.5", type="double")
+        self.expect_var_path("2.f + .5f", value="2.5", type="float")
+        self.expect_var_path("f + d", value="3.5", type="double")
+
+        # Check limits and overflows
+        self.expect_var_path("int_max + 1", type="int")
+        self.expect_var_path("uint_max + 1", value="0")
+        self.expect_var_path("4294967295 + 1", value="4294967296")
+        self.expect_var_path("ll_max + 1", type="long long")
+        self.expect_var_path("ull_max + 1", value="0")
+        self.expect_var_path("9223372036854775807 + 1", value="-9223372036854775808")
+        self.expect_var_path("18446744073709551615ULL + 1", value="0")
+
+        # Check references and typedefs
+        self.expect_var_path("r + 1", value="3")
+        self.expect_var_path("my_r + 1", value="3")
+        self.expect_var_path("r + my_r", value="4")

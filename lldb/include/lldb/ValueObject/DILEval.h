@@ -67,8 +67,8 @@ private:
                                  lldb::TypeSystemSP type_system);
   llvm::Expected<lldb::ValueObjectSP>
   UnaryConversion(lldb::ValueObjectSP valobj);
-  llvm::Expected<CompilerType> ArithmeticConversion(lldb::ValueObjectSP lhs,
-                                                    lldb::ValueObjectSP rhs);
+  llvm::Expected<CompilerType> ArithmeticConversion(lldb::ValueObjectSP &lhs,
+                                                    lldb::ValueObjectSP &rhs);
   llvm::Expected<lldb::ValueObjectSP> PointerAdd(lldb::ValueObjectSP ptr,
                                                  int64_t offset);
   llvm::Expected<lldb::ValueObjectSP>

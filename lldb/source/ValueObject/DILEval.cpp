@@ -160,8 +160,8 @@ static size_t ConversionRank(CompilerType type) {
 }
 
 llvm::Expected<CompilerType>
-Interpreter::ArithmeticConversion(lldb::ValueObjectSP lhs,
-                                  lldb::ValueObjectSP rhs) {
+Interpreter::ArithmeticConversion(lldb::ValueObjectSP &lhs,
+                                  lldb::ValueObjectSP &rhs) {
   // Apply unary conversion (e.g. intergal promotion) for both operands.
   auto lhs_or_err = UnaryConversion(lhs);
   if (!lhs_or_err)
@@ -532,9 +532,9 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddition(
   }
 
   if (!ptr || !offset->GetCompilerType().IsInteger()) {
-    std::string errMsg = llvm::formatv(
-        "invalid operands to binary expression ('{0}' and '{1}')",
-        orig_lhs_type.TypeDescription(), orig_rhs_type.TypeDescription());
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
   }
 
@@ -571,11 +571,11 @@ Interpreter::ConvertValueObjectToTypeSystem(lldb::ValueObjectSP valobj,
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BinaryOpNode *node) {
-  auto lhs_or_err = Evaluate(node->GetLHS());
+  auto lhs_or_err = EvaluateAndDereference(node->GetLHS());
   if (!lhs_or_err)
     return lhs_or_err;
   lldb::ValueObjectSP lhs = *lhs_or_err;
-  auto rhs_or_err = Evaluate(node->GetRHS());
+  auto rhs_or_err = EvaluateAndDereference(node->GetRHS());
   if (!rhs_or_err)
     return rhs_or_err;
   lldb::ValueObjectSP rhs = *rhs_or_err;
