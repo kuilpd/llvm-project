@@ -601,7 +601,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
   } else if (lhs_type.IsPointerType() && rhs_type.IsPointerType()) {
     if (lhs_type.IsPointerToVoid() && rhs_type.IsPointerToVoid()) {
       return llvm::make_error<DILDiagnosticError>(
-          m_expr, "arithmetic on a pointer to void", location);
+          m_expr, "arithmetic on pointers to void", location);
     }
 
     // Compare canonical unqualified pointer types.
@@ -612,14 +612,14 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
     bool comparable = lhs_unqualified_type.CompareTypes(rhs_unqualified_type);
     if (!comparable) {
       std::string errMsg = llvm::formatv(
-          "{0} and {1} are not pointers to compatible types",
-          orig_lhs_type.TypeDescription(), orig_rhs_type.TypeDescription());
+          "'{0}' and '{1}' are not pointers to compatible types",
+          orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
       return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
     }
   } else {
-    std::string errMsg = llvm::formatv(
-        "invalid operands to binary expression ('{0}' and '{1}')",
-        orig_lhs_type.TypeDescription(), orig_rhs_type.TypeDescription());
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
   }
 
