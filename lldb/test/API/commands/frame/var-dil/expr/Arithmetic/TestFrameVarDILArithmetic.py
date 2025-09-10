@@ -45,7 +45,7 @@ class TestFrameVarDILArithmetic(TestBase):
 
         # Check basic math and resulting types
         self.expect_var_path("1 + 2", value="3", type="int")
-        # self.expect_var_path("1 + 2*3", value="7")
+        self.expect_var_path("1 + 2*3", value="7")
         self.expect_var_path("1 + (2 - 3)", value="0")
         self.expect_var_path("s + x", value="12", type="int")
         self.expect_var_path("s + l", value="15", type="long")
@@ -54,10 +54,10 @@ class TestFrameVarDILArithmetic(TestBase):
         self.expect_var_path("2. + .5", value="2.5", type="double")
         self.expect_var_path("2.f + .5f", value="2.5", type="float")
         self.expect_var_path("f + d", value="3.5", type="double")
-        # self.expect_var_path("0.0 / 0", value="NaN")
-        # self.expect_var_path("0 / 0.0", value="NaN")
-        # self.expect_var_path("1 / +0.0", value="+Inf")
-        # self.expect_var_path("1 / -0.0", value="-Inf")
+        self.expect_var_path("0.0 / 0", value="NaN")
+        self.expect_var_path("0 / 0.0", value="NaN")
+        self.expect_var_path("1 / +0.0", value="+Inf")
+        self.expect_var_path("1 / -0.0", value="-Inf")
 
         # Check limits and overflows
         frame = thread.GetFrameAtIndex(0)
@@ -79,28 +79,52 @@ class TestFrameVarDILArithmetic(TestBase):
         self.expect_var_path("9223372036854775807 + 1", value="-9223372036854775808")
         self.expect_var_path("18446744073709551615ULL + 1", value="0")
 
-        # self.expect_var_path("-20 / 1U", value="4294967276")
-        # self.expect_var_path("-20LL / 1U", value="-20")
-        # self.expect_var_path("-20LL / 1ULL", value="18446744073709551596")
+        self.expect_var_path("-20 / 1U", value="4294967276")
+        self.expect_var_path("-20LL / 1U", value="-20")
+        self.expect_var_path("-20LL / 1ULL", value="18446744073709551596")
 
         # Check references and typedefs
         self.expect_var_path("r + 1", value="3")
         self.expect_var_path("r - 1l", value="1")
-        # self.expect_var_path("r * 2u", value="4")
-        # self.expect_var_path("r / 2ull", value="1")
+        self.expect_var_path("r * 2u", value="4")
+        self.expect_var_path("r / 2ull", value="1")
         self.expect_var_path("my_r + 1", value="3")
         self.expect_var_path("my_r - 1", value="1")
-        # self.expect_var_path("my_r * 2", value="4")
-        # self.expect_var_path("my_r / 2", value="1")
+        self.expect_var_path("my_r * 2", value="4")
+        self.expect_var_path("my_r / 2", value="1")
         self.expect_var_path("r + my_r", value="4")
         self.expect_var_path("r - my_r", value="0")
-        # self.expect_var_path("r * my_r", value="4")
-        # self.expect_var_path("r / my_r", value="1")
+        self.expect_var_path("r * my_r", value="4")
+        self.expect_var_path("r / my_r", value="1")
 
         # Division by zero
-        # self.expect_var_path("1 / 0"), IsError("Division by zero detected.")
-        # self.expect_var_path("1 / uint_zero"), IsError("Division by zero detected.")
-        # self.expect_var_path("1ll / 0 + 1"), IsError("Division by zero detected.")
-        # self.expect_var_path("1 % 0"), IsError("Division by zero detected.")
-        # self.expect_var_path("1 % uint_zero"), IsError("Division by zero detected.")
-        # self.expect_var_path("1 % uint_zero + 1"), IsError("Division by zero detected.")
+        self.expect(
+            "frame var -- '1 / 0'",
+            error=True,
+            substrs=["division by zero is undefined"],
+        )
+        self.expect(
+            "frame var -- '1 / uint_zero'",
+            error=True,
+            substrs=["division by zero is undefined"],
+        )
+        self.expect(
+            "frame var -- '1ll / 0 + 1'",
+            error=True,
+            substrs=["division by zero is undefined"],
+        )
+        self.expect(
+            "frame var -- '1 % 0'",
+            error=True,
+            substrs=["division by zero is undefined"],
+        )
+        self.expect(
+            "frame var -- '1 % uint_zero'",
+            error=True,
+            substrs=["division by zero is undefined"],
+        )
+        self.expect(
+            "frame var -- '1 % uint_zero + 1'",
+            error=True,
+            substrs=["division by zero is undefined"],
+        )

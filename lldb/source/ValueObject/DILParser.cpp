@@ -80,20 +80,42 @@ ASTNodeUP DILParser::Run() {
 // Parse an expression.
 //
 //  expression:
-//    unary_expression
+//    additive_expression
 //
 ASTNodeUP DILParser::ParseExpression() { return ParseAdditiveExpression(); }
 
 // Parse an additive_expression.
 //
 //  additive_expression:
-//    unary_expression {"+" unary_expression}
-//    unary_expression {"-" unary_expression}
+//    multiplicative_expression {"+" multiplicative_expression}
+//    multiplicative_expression {"-" multiplicative_expression}
 //
 ASTNodeUP DILParser::ParseAdditiveExpression() {
-  auto lhs = ParseUnaryExpression();
+  auto lhs = ParseMultiplicativeExpression();
 
   while (CurToken().IsOneOf({Token::plus, Token::minus})) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseMultiplicativeExpression();
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse a multiplicative_expression.
+//
+//  multiplicative_expression:
+//    unary_expression {"*" unary_expression}
+//    unary_expression {"/" unary_expression}
+//    unary_expression {"%" unary_expression}
+//
+ASTNodeUP DILParser::ParseMultiplicativeExpression() {
+  auto lhs = ParseUnaryExpression();
+
+  while (CurToken().IsOneOf({Token::star, Token::slash, Token::percent})) {
     Token token = CurToken();
     m_dil_lexer.Advance();
     auto rhs = ParseUnaryExpression();
@@ -109,7 +131,7 @@ ASTNodeUP DILParser::ParseAdditiveExpression() {
 //
 //  unary_expression:
 //    postfix_expression
-//    unary_operator expression
+//    unary_operator unary_expression
 //
 //  unary_operator:
 //    "&"
@@ -121,7 +143,7 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
     Token token = CurToken();
     uint32_t loc = token.GetLocation();
     m_dil_lexer.Advance();
-    auto rhs = ParseExpression();
+    auto rhs = ParseUnaryExpression();
     switch (token.GetKind()) {
     case Token::star:
       return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Deref,

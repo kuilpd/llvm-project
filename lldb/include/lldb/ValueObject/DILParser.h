@@ -88,6 +88,7 @@ private:
 
   ASTNodeUP ParseExpression();
   ASTNodeUP ParseAdditiveExpression();
+  ASTNodeUP ParseMultiplicativeExpression();
   ASTNodeUP ParseUnaryExpression();
   ASTNodeUP ParsePostfixExpression();
   ASTNodeUP ParsePrimaryExpression();

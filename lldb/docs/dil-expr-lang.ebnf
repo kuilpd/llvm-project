@@ -5,11 +5,15 @@
 
 expression = additive_expression ;
 
-additive_expression = unary_expression {"+" unary_expression} 
-                    | unary_expression {"-" unary_expression} ;
+additive_expression = multiplicative_expression {"+" multiplicative_expression} 
+                    | multiplicative_expression {"-" multiplicative_expression} ;
+
+multiplicative_expression = unary_expression {"*" unary_expression}
+                          | unary_expression {"/" unary_expression}
+                          | unary_expression {"%" unary_expression} ;
 
 unary_expression = postfix_expression
-                 | unary_operator expression ;
+                 | unary_operator unary_expression ;
 
 unary_operator = "*" | "&" ;
 

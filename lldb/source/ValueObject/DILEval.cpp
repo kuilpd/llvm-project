@@ -489,17 +489,22 @@ Interpreter::EvaluateArithmeticOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
     return llvm::make_error<DILDiagnosticError>(m_expr, "invalid scalar value",
                                                 location);
 
+  auto value_object = [this, result_type](Scalar scalar) {
+    return ValueObject::CreateValueObjectFromScalar(m_target, scalar,
+                                                    result_type, "result");
+  };
+
   switch (kind) {
-  case BinaryOpKind::Add: {
-    Scalar result = l + r;
-    return ValueObject::CreateValueObjectFromScalar(m_target, result,
-                                                    result_type, "result");
-  }
-  case BinaryOpKind::Sub: {
-    Scalar result = l - r;
-    return ValueObject::CreateValueObjectFromScalar(m_target, result,
-                                                    result_type, "result");
-  }
+  case BinaryOpKind::Add:
+    return value_object(l + r);
+  case BinaryOpKind::Sub:
+    return value_object(l - r);
+  case BinaryOpKind::Mul:
+    return value_object(l * r);
+  case BinaryOpKind::Div:
+    return value_object(l / r);
+  case BinaryOpKind::Rem:
+    return value_object(l % r);
   }
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "invalid arithmetic operation", location);
@@ -666,6 +671,82 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
                                                 *ptrdiff_t);
 }
 
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryMultiplication(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operation '*' works for:
+  //  {scalar,unscoped_enum} <-> {scalar,unscoped_enum}
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (result_type.IsScalarType())
+    return EvaluateArithmeticOp(BinaryOpKind::Mul, lhs, rhs, result_type,
+                                location);
+
+  std::string errMsg =
+      llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                    orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+  return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryDivision(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operation '/' works for:
+  //  {scalar,unscoped_enum} <-> {scalar,unscoped_enum}
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (!result_type.IsScalarType()) {
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  }
+
+  // Check for zero only for integer division.
+  if (result_type.IsInteger() && rhs->GetValueAsUnsigned(0) == 0) {
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "division by zero is undefined", location);
+  }
+
+  return EvaluateArithmeticOp(BinaryOpKind::Div, lhs, rhs, result_type,
+                              location);
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryRemainder(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operation '%' works for:
+  //  {integer,unscoped_enum} <-> {integer,unscoped_enum}
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (!result_type.IsInteger()) {
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  }
+
+  if (rhs->GetValueAsUnsigned(0) == 0) {
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "division by zero is undefined", location);
+  }
+
+  return EvaluateArithmeticOp(BinaryOpKind::Rem, lhs, rhs, result_type,
+                              location);
+}
+
 lldb::ValueObjectSP
 Interpreter::ConvertValueObjectToTypeSystem(lldb::ValueObjectSP valobj,
                                             lldb::TypeSystemSP type_system) {
@@ -718,6 +799,12 @@ Interpreter::Visit(const BinaryOpNode *node) {
     return EvaluateBinaryAddition(lhs, rhs, node->GetLocation());
   case BinaryOpKind::Sub:
     return EvaluateBinarySubtraction(lhs, rhs, node->GetLocation());
+  case BinaryOpKind::Mul:
+    return EvaluateBinaryMultiplication(lhs, rhs, node->GetLocation());
+  case BinaryOpKind::Div:
+    return EvaluateBinaryDivision(lhs, rhs, node->GetLocation());
+  case BinaryOpKind::Rem:
+    return EvaluateBinaryRemainder(lhs, rhs, node->GetLocation());
   }
 
   return llvm::make_error<DILDiagnosticError>(
