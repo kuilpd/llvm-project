@@ -505,6 +505,16 @@ Interpreter::EvaluateArithmeticOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
     return value_object(l / r);
   case BinaryOpKind::Rem:
     return value_object(l % r);
+  case BinaryOpKind::And:
+    return value_object(l & r);
+  case BinaryOpKind::Xor:
+    return value_object(l ^ r);
+  case BinaryOpKind::Or:
+    return value_object(l | r);
+  case BinaryOpKind::Shl:
+    return value_object(l >> r);
+  case BinaryOpKind::Shr:
+    return value_object(l << r);
   }
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "invalid arithmetic operation", location);
@@ -747,6 +757,28 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryRemainder(
                               location);
 }
 
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateBinaryBitwise(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                                   lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operations {'&', '|', '^', '>>', '<<'} work for:
+  //  {integer,unscoped_enum} <-> {integer,unscoped_enum}
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (!result_type.IsInteger()) {
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  }
+
+  return EvaluateArithmeticOp(kind, lhs, rhs, result_type, location);
+}
+
 lldb::ValueObjectSP
 Interpreter::ConvertValueObjectToTypeSystem(lldb::ValueObjectSP valobj,
                                             lldb::TypeSystemSP type_system) {
@@ -805,6 +837,13 @@ Interpreter::Visit(const BinaryOpNode *node) {
     return EvaluateBinaryDivision(lhs, rhs, node->GetLocation());
   case BinaryOpKind::Rem:
     return EvaluateBinaryRemainder(lhs, rhs, node->GetLocation());
+  case BinaryOpKind::And:
+  case BinaryOpKind::Xor:
+  case BinaryOpKind::Or:
+  case BinaryOpKind::Shl:
+  case BinaryOpKind::Shr:
+    return EvaluateBinaryBitwise(node->GetKind(), lhs, rhs,
+                                 node->GetLocation());
   }
 
   return llvm::make_error<DILDiagnosticError>(

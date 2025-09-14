@@ -3,7 +3,16 @@
 (* This is currently a subset of the final DIL Language, matching the current
    DIL implementation. *)
 
-expression = additive_expression ;
+expression = inclusive_or_expression ;
+
+inclusive_or_expression = exclusive_or_expression {"|" exclusive_or_expression} ;
+
+exclusive_or_expression = and_expression {"^" and_expression} ;
+
+and_expression = shift_expression {"&" shift_expression} ;
+
+shift_expression = additive_expression {"<<" additive_expression}
+                 | additive_expression {">>" additive_expression} ;
 
 additive_expression = multiplicative_expression {"+" multiplicative_expression} 
                     | multiplicative_expression {"-" multiplicative_expression} ;

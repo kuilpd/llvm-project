@@ -87,6 +87,10 @@ private:
   ASTNodeUP Run();
 
   ASTNodeUP ParseExpression();
+  ASTNodeUP ParseInclusiveOrExpression();
+  ASTNodeUP ParseExclusiveOrExpression();
+  ASTNodeUP ParseAndExpression();
+  ASTNodeUP ParseShiftExpression();
   ASTNodeUP ParseAdditiveExpression();
   ASTNodeUP ParseMultiplicativeExpression();
   ASTNodeUP ParseUnaryExpression();

@@ -80,9 +80,90 @@ ASTNodeUP DILParser::Run() {
 // Parse an expression.
 //
 //  expression:
-//    additive_expression
+//    inclusive_or_expression
 //
 ASTNodeUP DILParser::ParseExpression() { return ParseAdditiveExpression(); }
+
+// Parse an inclusive_or_expression.
+//
+//  inclusive_or_expression:
+//    exclusive_or_expression {"|" exclusive_or_expression}
+//
+ASTNodeUP DILParser::ParseInclusiveOrExpression() {
+  auto lhs = ParseExclusiveOrExpression();
+
+  while (CurToken().Is(Token::pipe)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseExclusiveOrExpression();
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse an exclusive_or_expression.
+//
+//  exclusive_or_expression:
+//    and_expression {"^" and_expression}
+//
+ASTNodeUP DILParser::ParseExclusiveOrExpression() {
+  auto lhs = ParseAndExpression();
+
+  while (CurToken().Is(Token::caret)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseAndExpression();
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse an and_expression.
+//
+//  and_expression:
+//    shift_expression {"&" shift_expression}
+//
+ASTNodeUP DILParser::ParseAndExpression() {
+  auto lhs = ParseShiftExpression();
+
+  while (CurToken().Is(Token::amp)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseShiftExpression();
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse a shift_expression.
+//
+//  shift_expression:
+//    additive_expression {"<<" additive_expression}
+//    additive_expression {">>" additive_expression}
+//
+ASTNodeUP DILParser::ParseShiftExpression() {
+  auto lhs = ParseAdditiveExpression();
+
+  while (CurToken().IsOneOf({Token::lessless, Token::greatergreater})) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseAdditiveExpression();
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
 
 // Parse an additive_expression.
 //

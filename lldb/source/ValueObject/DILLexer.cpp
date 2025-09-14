@@ -24,6 +24,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "amp";
   case Kind::arrow:
     return "arrow";
+  case Token::caret:
+    return "caret";
   case Kind::coloncolon:
     return "coloncolon";
   case Kind::colon:
@@ -32,6 +34,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "eof";
   case Kind::float_constant:
     return "float_constant";
+  case Kind::greatergreater:
+    return "greatergreater";
   case Kind::identifier:
     return "identifier";
   case Kind::integer_constant:
@@ -40,12 +44,16 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "l_paren";
   case Kind::l_square:
     return "l_square";
+  case Kind::lessless:
+    return "lessless";
   case Kind::minus:
     return "minus";
   case Kind::percent:
     return "percent";
   case Kind::period:
     return "period";
+  case Kind::pipe:
+    return "pipe";
   case Kind::plus:
     return "plus";
   case Kind::r_paren:
@@ -146,11 +154,24 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
     return Token(Token::identifier, maybe_word->str(), position);
 
   constexpr std::pair<Token::Kind, const char *> operators[] = {
-      {Token::amp, "&"},   {Token::arrow, "->"},  {Token::coloncolon, "::"},
-      {Token::colon, ":"}, {Token::l_paren, "("}, {Token::l_square, "["},
-      {Token::minus, "-"}, {Token::percent, "%"}, {Token::period, "."},
-      {Token::plus, "+"},  {Token::r_paren, ")"}, {Token::r_square, "]"},
-      {Token::slash, "/"}, {Token::star, "*"},
+      {Token::amp, "&"},
+      {Token::arrow, "->"},
+      {Token::coloncolon, "::"},
+      {Token::caret, "^"},
+      {Token::colon, ":"},
+      {Token::greatergreater, ">>"},
+      {Token::l_paren, "("},
+      {Token::l_square, "["},
+      {Token::lessless, "lessless"},
+      {Token::minus, "-"},
+      {Token::percent, "%"},
+      {Token::period, "."},
+      {Token::pipe, "|"},
+      {Token::plus, "+"},
+      {Token::r_paren, ")"},
+      {Token::r_square, "]"},
+      {Token::slash, "/"},
+      {Token::star, "*"},
   };
   for (auto [kind, str] : operators) {
     if (remainder.consume_front(str))
