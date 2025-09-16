@@ -40,6 +40,10 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "identifier";
   case Kind::integer_constant:
     return "integer_constant";
+  case Kind::kw_false:
+    return "false";
+  case Kind::kw_true:
+    return "true";
   case Kind::l_paren:
     return "l_paren";
   case Kind::l_square:
@@ -150,8 +154,14 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
     return Token(kind, maybe_number->str(), position);
   }
   std::optional<llvm::StringRef> maybe_word = IsWord(expr, remainder);
-  if (maybe_word)
-    return Token(Token::identifier, maybe_word->str(), position);
+  if (maybe_word) {
+    llvm::StringRef word = *maybe_word;
+    Token::Kind kind = llvm::StringSwitch<Token::Kind>(word)
+                           .Case("false", Token::kw_false)
+                           .Case("true", Token::kw_true)
+                           .Default(Token::identifier);
+    return Token(kind, word.str(), position);
+  }
 
   constexpr std::pair<Token::Kind, const char *> operators[] = {
       {Token::arrow, "->"},

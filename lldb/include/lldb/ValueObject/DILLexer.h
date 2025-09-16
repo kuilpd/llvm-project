@@ -34,6 +34,8 @@ public:
     greatergreater,
     identifier,
     integer_constant,
+    kw_false,
+    kw_true,
     l_paren,
     l_square,
     lessless,

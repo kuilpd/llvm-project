@@ -36,6 +36,7 @@ postfix_expression = primary_expression
                    | postfix_expression "->" id_expression ;
 
 primary_expression = numeric_literal
+                   | boolean_literal
                    | id_expression
                    | "(" expression ")" ;
 
@@ -52,6 +53,8 @@ identifier = ? C99 Identifier ? ;
 
 numeric_literal = ? Integer constant: hexademical, decimal, octal, binary ?
                 | ? Floating constant ? ;
+
+boolean_literal = "true" | "false" ;
 
 register = "$" ? Register name ? ;
 

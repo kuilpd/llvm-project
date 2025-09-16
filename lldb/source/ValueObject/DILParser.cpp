@@ -425,12 +425,15 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
 //
 //  primary_expression:
 //    numeric_literal
+//    boolean_literal
 //    id_expression
 //    "(" expression ")"
 //
 ASTNodeUP DILParser::ParsePrimaryExpression() {
   if (CurToken().IsOneOf({Token::integer_constant, Token::float_constant}))
     return ParseNumericLiteral();
+  if (CurToken().IsOneOf({Token::kw_true, Token::kw_false}))
+    return ParseBooleanLiteral();
   if (CurToken().IsOneOf(
           {Token::coloncolon, Token::identifier, Token::l_paren})) {
     // Save the source location for the diagnostics message.
@@ -809,6 +812,20 @@ std::string DILParser::ParseUnqualifiedId() {
   std::string identifier = CurToken().GetSpelling();
   m_dil_lexer.Advance();
   return identifier;
+}
+
+// Parse an boolean_literal.
+//
+//  boolean_literal:
+//    "true"
+//    "false"
+//
+ASTNodeUP DILParser::ParseBooleanLiteral() {
+  ExpectOneOf(std::vector<Token::Kind>{Token::kw_true, Token::kw_false});
+  uint32_t loc = CurToken().GetLocation();
+  bool literal_value = CurToken().Is(Token::kw_true);
+  m_dil_lexer.Advance();
+  return std::make_unique<BooleanLiteralNode>(loc, literal_value);
 }
 
 CompilerType
