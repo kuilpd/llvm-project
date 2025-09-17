@@ -484,7 +484,8 @@ Scalar &Scalar::operator>>=(const Scalar &rhs) {
       m_type = e_void;
       break;
     case e_int:
-      m_integer = m_integer.ashr(rhs.m_integer);
+      m_integer = m_integer.isSigned() ? m_integer.ashr(rhs.m_integer)
+                                       : m_integer.lshr(rhs.m_integer);
       break;
     }
     break;
