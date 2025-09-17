@@ -512,9 +512,9 @@ Interpreter::EvaluateArithmeticOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
   case BinaryOpKind::Or:
     return value_object(l | r);
   case BinaryOpKind::Shl:
-    return value_object(l >> r);
-  case BinaryOpKind::Shr:
     return value_object(l << r);
+  case BinaryOpKind::Shr:
+    return value_object(l >> r);
   }
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "invalid arithmetic operation", location);
@@ -760,7 +760,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryRemainder(
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::EvaluateBinaryBitwise(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                                    lldb::ValueObjectSP rhs, uint32_t location) {
-  // Operations {'&', '|', '^', '>>', '<<'} work for:
+  // Operations {'&', '|', '^'} work for:
   //  {integer,unscoped_enum} <-> {integer,unscoped_enum}
   auto orig_lhs_type = lhs->GetCompilerType();
   auto orig_rhs_type = rhs->GetCompilerType();
@@ -777,6 +777,33 @@ Interpreter::EvaluateBinaryBitwise(BinaryOpKind kind, lldb::ValueObjectSP lhs,
   }
 
   return EvaluateArithmeticOp(kind, lhs, rhs, result_type, location);
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                                 lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operations {'>>', '<<'} work for:
+  //  {integer,unscoped_enum} <-> {integer,unscoped_enum}
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto lhs_or_err = UnaryConversion(lhs);
+  if (!lhs_or_err)
+    return lhs_or_err.takeError();
+  lhs = *lhs_or_err;
+  auto rhs_or_err = UnaryConversion(rhs);
+  if (!rhs_or_err)
+    return rhs_or_err.takeError();
+  rhs = *rhs_or_err;
+
+  if (!lhs->GetCompilerType().IsInteger() ||
+      !rhs->GetCompilerType().IsInteger()) {
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  }
+
+  return EvaluateArithmeticOp(kind, lhs, rhs, lhs->GetCompilerType(), location);
 }
 
 lldb::ValueObjectSP
@@ -840,10 +867,11 @@ Interpreter::Visit(const BinaryOpNode *node) {
   case BinaryOpKind::And:
   case BinaryOpKind::Xor:
   case BinaryOpKind::Or:
-  case BinaryOpKind::Shl:
-  case BinaryOpKind::Shr:
     return EvaluateBinaryBitwise(node->GetKind(), lhs, rhs,
                                  node->GetLocation());
+  case BinaryOpKind::Shl:
+  case BinaryOpKind::Shr:
+    return EvaluateBinaryShift(node->GetKind(), lhs, rhs, node->GetLocation());
   }
 
   return llvm::make_error<DILDiagnosticError>(
@@ -1210,6 +1238,12 @@ Interpreter::Visit(const IntegerLiteralNode *node) {
   if (!type_bitsize)
     return type_bitsize.takeError();
   scalar.TruncOrExtendTo(*type_bitsize, false);
+
+  // Scalar created from APInt is unsigned by default, so if we picked a
+  // signed integer type, make the Scalar value signed as well.
+  if (type->IsSigned())
+    scalar.MakeSigned();
+
   return ValueObject::CreateValueObjectFromScalar(m_target, scalar, *type,
                                                   "result");
 }

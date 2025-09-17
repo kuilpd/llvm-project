@@ -154,15 +154,15 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
     return Token(Token::identifier, maybe_word->str(), position);
 
   constexpr std::pair<Token::Kind, const char *> operators[] = {
-      {Token::amp, "&"},
       {Token::arrow, "->"},
       {Token::coloncolon, "::"},
+      {Token::greatergreater, ">>"},
+      {Token::lessless, "<<"},
+      {Token::amp, "&"},
       {Token::caret, "^"},
       {Token::colon, ":"},
-      {Token::greatergreater, ">>"},
       {Token::l_paren, "("},
       {Token::l_square, "["},
-      {Token::lessless, "lessless"},
       {Token::minus, "-"},
       {Token::percent, "%"},
       {Token::period, "."},

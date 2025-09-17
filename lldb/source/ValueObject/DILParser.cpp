@@ -82,7 +82,7 @@ ASTNodeUP DILParser::Run() {
 //  expression:
 //    inclusive_or_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParseAdditiveExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParseInclusiveOrExpression(); }
 
 // Parse an inclusive_or_expression.
 //
