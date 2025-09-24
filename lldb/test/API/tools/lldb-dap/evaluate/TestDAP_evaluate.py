@@ -129,7 +129,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluateFailure("a_function")
             self.assertEvaluateFailure("a_function(1)")
-            self.assertEvaluateFailure("var2 + struct1.foo")
+            self.assertEvaluate("var2 + struct1.foo", "36")
             self.assertEvaluateFailure("foo_func")
             self.assertEvaluate("foo_var", "44")
 
@@ -167,7 +167,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluateFailure("a_function")
             self.assertEvaluateFailure("a_function(1)")
-            self.assertEvaluateFailure("var2 + struct1.foo")
+            self.assertEvaluate("var2 + struct1.foo", "17")
             self.assertEvaluateFailure("foo_func")
             self.assertEvaluate("foo_var", "44")
 
@@ -193,7 +193,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluateFailure("a_function")
             self.assertEvaluateFailure("a_function(1)")
-            self.assertEvaluateFailure("list + 1")
+            self.assertEvaluate("list + 1", "43")
             self.assertEvaluateFailure("foo_func")
             self.assertEvaluate("foo_var", "44")
 

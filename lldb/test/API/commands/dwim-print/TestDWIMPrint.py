@@ -78,9 +78,9 @@ class TestCase(TestBase):
         """Test dwim-print with expressions."""
         self.build()
         lldbutil.run_to_name_breakpoint(self, "main")
-        exprs = ("argc + 1", "(void)argc", "(int)abs(argc)")
-        for expr in exprs:
-            self._expect_cmd(f"dwim-print {expr}", "expression")
+        self._expect_cmd(f"dwim-print argc+1", "frame variable")
+        self._expect_cmd(f"dwim-print (void)argc", "expression")
+        self._expect_cmd(f"dwim-print (int)abs(argc)", "expression")
 
     def test_dummy_target_expressions(self):
         """Test dwim-print's ability to evaluate expressions without a target."""
@@ -90,26 +90,30 @@ class TestCase(TestBase):
         self.build()
         lldbutil.run_to_name_breakpoint(self, "main")
         self._expect_cmd(f"dwim-print/x argc", "frame variable")
-        self._expect_cmd(f"dwim-print/x argc + 1", "expression")
+        self._expect_cmd(f"dwim-print/x argc+1", "frame variable")
+        self._expect_cmd(f"dwim-print/x (int)abs(argc)", "expression")
 
     def test_format_flags(self):
         self.build()
         lldbutil.run_to_name_breakpoint(self, "main")
         self._expect_cmd(f"dwim-print -fx -- argc", "frame variable")
-        self._expect_cmd(f"dwim-print -fx -- argc + 1", "expression")
+        self._expect_cmd(f"dwim-print -fx -- argc+1", "frame variable")
+        self._expect_cmd(f"dwim-print -fx -- (int)abs(argc)", "expression")
 
     def test_display_flags(self):
         self.build()
         lldbutil.run_to_name_breakpoint(self, "main")
         self._expect_cmd(f"dwim-print -T -- argc", "frame variable")
-        self._expect_cmd(f"dwim-print -T -- argc + 1", "expression")
+        self._expect_cmd(f"dwim-print -T -- argc+1", "frame variable")
+        self._expect_cmd(f"dwim-print -T -- (int)abs(argc)", "expression")
 
     def test_expression_language(self):
         """Test that the language flag doesn't affect the choice of command."""
         self.build()
         lldbutil.run_to_name_breakpoint(self, "main")
         self._expect_cmd(f"dwim-print -l c++ -- argc", "frame variable")
-        self._expect_cmd(f"dwim-print -l c++ -- argc + 1", "expression")
+        self._expect_cmd(f"dwim-print -l c++ -- argc+1", "frame variable")
+        self._expect_cmd(f"dwim-print -l c++ -- (int)abs(argc)", "expression")
 
     def test_empty_expression(self):
         self.build()
