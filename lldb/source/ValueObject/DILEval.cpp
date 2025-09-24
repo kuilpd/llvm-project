@@ -1105,7 +1105,7 @@ Interpreter::Visit(const BinaryOpNode *node) {
 
   bool lhs_is_literal = node->GetLHS()->IsConstLiteral();
   bool rhs_is_literal = node->GetRHS()->IsConstLiteral();
-  if (lhs_system != rhs_system) {
+  if (lhs_system->GetPluginName() != rhs_system->GetPluginName()) {
     // If one of the nodes is a const literal, convert it to the
     // type system of another one
     if (lhs_is_literal)
