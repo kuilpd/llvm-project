@@ -77,10 +77,11 @@ private:
                                                     lldb::ValueObjectSP &rhs);
   llvm::Expected<lldb::ValueObjectSP> PointerAdd(lldb::ValueObjectSP ptr,
                                                  int64_t offset);
-  llvm::Expected<lldb::ValueObjectSP>
-  EvaluateArithmeticOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
-                       lldb::ValueObjectSP rhs, CompilerType result_type,
-                       uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP> EvaluateScalarOp(BinaryOpKind kind,
+                                                       lldb::ValueObjectSP lhs,
+                                                       lldb::ValueObjectSP rhs,
+                                                       CompilerType result_type,
+                                                       uint32_t location);
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryAddition(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                          uint32_t location);
@@ -102,6 +103,14 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                       lldb::ValueObjectSP rhs, uint32_t location);
+  llvm::Error ValidateComparison(BinaryOpKind kind, lldb::ValueObjectSP &lhs,
+                                 lldb::ValueObjectSP &rhs, bool lhs_is_literal,
+                                 bool rhs_is_literal, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateComparison(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                     lldb::ValueObjectSP rhs, bool lhs_is_literal,
+                     bool rhs_is_literal, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP> EvaluateLogical(const BinaryOpNode *node);
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system,
                   std::shared_ptr<ExecutionContextScope> ctx,

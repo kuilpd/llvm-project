@@ -146,9 +146,13 @@ private:
   ASTNodeUP Run();
 
   ASTNodeUP ParseExpression();
+  ASTNodeUP ParseLogicalOrExpression();
+  ASTNodeUP ParseLogicalAndExpression();
   ASTNodeUP ParseInclusiveOrExpression();
   ASTNodeUP ParseExclusiveOrExpression();
   ASTNodeUP ParseAndExpression();
+  ASTNodeUP ParseEqualityExpression();
+  ASTNodeUP ParseRelationalExpression();
   ASTNodeUP ParseShiftExpression();
   ASTNodeUP ParseAdditiveExpression();
   ASTNodeUP ParseMultiplicativeExpression();

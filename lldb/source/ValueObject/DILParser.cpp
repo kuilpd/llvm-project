@@ -159,9 +159,49 @@ ASTNodeUP DILParser::Run() {
 // Parse an expression.
 //
 //  expression:
-//    inclusive_or_expression
+//    logical_or_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParseInclusiveOrExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParseLogicalOrExpression(); }
+
+// Parse a logical_or_expression.
+//
+//  logical_or_expression:
+//    logical_and_expression {"||" logical_and_expression}
+//
+ASTNodeUP DILParser::ParseLogicalOrExpression() {
+  auto lhs = ParseLogicalAndExpression();
+
+  while (CurToken().Is(Token::pipepipe)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseLogicalAndExpression();
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse a logical_and_expression.
+//
+//  logical_and_expression:
+//    inclusive_or_expression {"&&" inclusive_or_expression}
+//
+ASTNodeUP DILParser::ParseLogicalAndExpression() {
+  auto lhs = ParseInclusiveOrExpression();
+
+  while (CurToken().Is(Token::ampamp)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseInclusiveOrExpression();
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
 
 // Parse an inclusive_or_expression.
 //
@@ -206,12 +246,57 @@ ASTNodeUP DILParser::ParseExclusiveOrExpression() {
 // Parse an and_expression.
 //
 //  and_expression:
-//    shift_expression {"&" shift_expression}
+//    equality_expression {"&" equality_expression}
 //
 ASTNodeUP DILParser::ParseAndExpression() {
-  auto lhs = ParseShiftExpression();
+  auto lhs = ParseEqualityExpression();
 
   while (CurToken().Is(Token::amp)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseEqualityExpression();
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse an equality_expression.
+//
+//  equality_expression:
+//    relational_expression {"==" relational_expression}
+//    relational_expression {"!=" relational_expression}
+//
+ASTNodeUP DILParser::ParseEqualityExpression() {
+  auto lhs = ParseRelationalExpression();
+
+  while (CurToken().IsOneOf({Token::equalequal, Token::exclaimequal})) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseRelationalExpression();
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse a relational_expression.
+//
+//  relational_expression:
+//    shift_expression {"<" shift_expression}
+//    shift_expression {">" shift_expression}
+//    shift_expression {"<=" shift_expression}
+//    shift_expression {">=" shift_expression}
+//
+ASTNodeUP DILParser::ParseRelationalExpression() {
+  auto lhs = ParseShiftExpression();
+
+  while (CurToken().IsOneOf(
+      {Token::less, Token::greater, Token::lessequal, Token::greaterequal})) {
     Token token = CurToken();
     m_dil_lexer.Advance();
     auto rhs = ParseShiftExpression();
