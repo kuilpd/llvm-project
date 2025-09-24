@@ -23,6 +23,10 @@ class TestFrameVarDILLiterals(TestBase):
         self.expect_var_path("true", value="true", type="bool")
         self.expect_var_path("false", value="false", type="bool")
 
+        # Check nullptr literal parsing
+        nullptr_value = "0x" + "00" * self.target().GetAddressByteSize()
+        self.expect_var_path("nullptr", value=nullptr_value)
+
         # Check number literals parsing
         self.expect_var_path("1.0", value="1", type="double")
         self.expect_var_path("1.0f", value="1", type="float")

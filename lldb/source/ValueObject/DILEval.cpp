@@ -1302,6 +1302,20 @@ Interpreter::Visit(const BooleanLiteralNode *node) {
   return ValueObject::CreateValueObjectFromBool(m_target, value, "result");
 }
 
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const PointerLiteralNode *node) {
+  llvm::Expected<lldb::TypeSystemSP> type_system =
+      DILGetTypeSystemFromCU(m_exe_ctx_scope);
+  if (!type_system)
+    return type_system.takeError();
+  type_system.get()->GetPointerByteSize();
+  llvm::APInt ptr_value(type_system.get()->GetPointerByteSize() * CHAR_BIT, 0);
+  Scalar scalar(ptr_value);
+  CompilerType type = GetBasicType(*type_system, lldb::eBasicTypeNullPtr);
+  return ValueObject::CreateValueObjectFromScalar(m_target, scalar, type,
+                                                  "result");
+}
+
 llvm::Expected<CompilerType> Interpreter::VerifyCStyleCastType(
     lldb::ValueObjectSP &operand, CompilerType &op_type,
     CompilerType target_type, CastPromoKind &promo_kind,

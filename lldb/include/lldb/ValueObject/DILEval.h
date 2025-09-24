@@ -64,6 +64,8 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
+  Visit(const PointerLiteralNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
   Visit(const CStyleCastNode *node) override;
 
   lldb::ValueObjectSP

@@ -83,6 +83,11 @@ BooleanLiteralNode::Accept(Visitor *v) const {
   return v->Visit(this);
 }
 
+llvm::Expected<lldb::ValueObjectSP>
+PointerLiteralNode::Accept(Visitor *v) const {
+  return v->Visit(this);
+}
+
 llvm::Expected<lldb::ValueObjectSP> CStyleCastNode::Accept(Visitor *v) const {
   return v->Visit(this);
 }
