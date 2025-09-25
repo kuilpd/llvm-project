@@ -27,13 +27,13 @@ class TestFrameVarLogical(TestBase):
         self.expect_var_path("0 || 1", value="true")
         self.expect_var_path("0 || 0", value="false")
 
-        # self.expect_var_path("!1", value="false")
-        # self.expect_var_path("!!1", value="true")
+        self.expect_var_path("!1", value="false")
+        self.expect_var_path("!!1", value="true")
 
-        # self.expect_var_path("!trueVar", value="false")
-        # self.expect_var_path("!!trueVar", value="true")
-        # self.expect_var_path("!falseVar", value="true")
-        # self.expect_var_path("!!falseVar", value="false")
+        self.expect_var_path("!trueVar", value="false")
+        self.expect_var_path("!!trueVar", value="true")
+        self.expect_var_path("!falseVar", value="true")
+        self.expect_var_path("!!falseVar", value="false")
 
         self.expect_var_path("trueVar && true", value="true")
         self.expect_var_path("trueVar && (2 > 1)", value="true")
@@ -44,17 +44,17 @@ class TestFrameVarLogical(TestBase):
         self.expect_var_path("falseVar || (2 > 1)", value="true")
         self.expect_var_path("falseVar || (2 < 1)", value="false")
 
-        # self.expect_var_path("!p_ptr", value="false")
-        # self.expect_var_path("!!p_ptr", value="true")
+        self.expect_var_path("!p_ptr", value="false")
+        self.expect_var_path("!!p_ptr", value="true")
         self.expect_var_path("p_ptr && true", value="true")
         self.expect_var_path("p_ptr && false", value="false")
-        # self.expect_var_path("!p_nullptr", value="true")
-        # self.expect_var_path("!!p_nullptr", value="false")
+        self.expect_var_path("!p_nullptr", value="true")
+        self.expect_var_path("!!p_nullptr", value="false")
         self.expect_var_path("p_nullptr || true", value="true")
         self.expect_var_path("p_nullptr || false", value="false")
 
-        # self.expect_var_path("!array", value="false")
-        # self.expect_var_path("!!array", value="true")
+        self.expect_var_path("!array", value="false")
+        self.expect_var_path("!!array", value="true")
         self.expect_var_path("array || true", value="true")
         self.expect_var_path("false || array", value="true")
         self.expect_var_path("array && true", value="true")
@@ -65,9 +65,11 @@ class TestFrameVarLogical(TestBase):
         self.expect_var_path("true || __doesnt_exist", value="true")
         self.expect_var_path("false && __doesnt_exist", value="false")
 
-        # self.expect("frame var -- 'false || !s'",
-        #     error=True,
-        #     substrs=["invalid argument type 'S' to unary expression"])
+        self.expect(
+            "frame var -- 'false || !s'",
+            error=True,
+            substrs=["invalid argument type 'S' to unary expression"],
+        )
         self.expect(
             "frame var -- 's || false'",
             error=True,

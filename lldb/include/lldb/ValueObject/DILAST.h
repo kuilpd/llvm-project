@@ -54,6 +54,8 @@ enum class UnaryOpKind {
   Deref,  // "*"
   Minus,  // "-"
   Plus,   // "+"
+  Not,    // "~"
+  LNot,   // "!"
 };
 
 /// The binary operators recognized by DIL.

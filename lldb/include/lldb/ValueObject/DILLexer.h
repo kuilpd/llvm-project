@@ -32,6 +32,7 @@ public:
     colon,
     eof,
     equalequal,
+    exclaim,
     exclaimequal,
     float_constant,
     greater,
@@ -57,6 +58,7 @@ public:
     r_square,
     slash,
     star,
+    tilde,
   };
 
   Token(Kind kind, std::string spelling, uint32_t start)

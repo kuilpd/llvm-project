@@ -480,8 +480,47 @@ Interpreter::Visit(const UnaryOpNode *node) {
     }
     return operand;
   }
+  case UnaryOpKind::LNot: {
+    CompilerType operand_type = operand->GetCompilerType();
+    if (!operand->GetCompilerType().IsContextuallyConvertibleToBool()) {
+      std::string errMsg =
+          llvm::formatv("invalid argument type '{0}' to unary expression",
+                        operand_type.GetTypeName());
+      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                  node->GetLocation());
+    }
+    auto value_or_err = operand->GetValueAsBool();
+    if (value_or_err)
+      return ValueObject::CreateValueObjectFromBool(m_target, !(*value_or_err),
+                                                    "result");
+    break;
   }
-  return llvm::make_error<DILDiagnosticError>(m_expr, "invalid unary operation",
+  case UnaryOpKind::Not: {
+    llvm::Expected<lldb::ValueObjectSP> conv_op = UnaryConversion(operand);
+    if (!conv_op)
+      return conv_op;
+    operand = *conv_op;
+    CompilerType operand_type = operand->GetCompilerType();
+    if (!operand_type.IsInteger()) {
+      std::string errMsg =
+          llvm::formatv("invalid argument type '{0}' to unary expression",
+                        operand_type.GetTypeName());
+      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                  node->GetLocation());
+    }
+    Scalar scalar;
+    bool resolved = operand->ResolveValue(scalar);
+    if (!resolved)
+      break;
+
+    bool flipped = scalar.OnesComplement();
+    if (flipped)
+      return ValueObject::CreateValueObjectFromScalar(
+          m_target, scalar, operand->GetCompilerType(), "result");
+    break;
+  }
+  }
+  return llvm::make_error<DILDiagnosticError>(m_expr, "invalid operand value",
                                               node->GetLocation());
 }
 

@@ -36,6 +36,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "eof";
   case Kind::equalequal:
     return "equalequal";
+  case Kind::exclaim:
+    return "exclaim";
   case Kind::exclaimequal:
     return "exclaimequal";
   case Kind::float_constant:
@@ -86,6 +88,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "slash";
   case Token::star:
     return "star";
+  case Token::tilde:
+    return "tilde";
   }
   llvm_unreachable("Unknown token name");
 }
@@ -196,6 +200,7 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
       {Token::amp, "&"},
       {Token::caret, "^"},
       {Token::colon, ":"},
+      {Token::exclaim, "!"},
       {Token::greater, ">"},
       {Token::l_paren, "("},
       {Token::l_square, "["},
@@ -209,6 +214,7 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
       {Token::r_square, "]"},
       {Token::slash, "/"},
       {Token::star, "*"},
+      {Token::tilde, "~"},
   };
   for (auto [kind, str] : operators) {
     if (remainder.consume_front(str))

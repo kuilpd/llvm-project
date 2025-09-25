@@ -426,13 +426,11 @@ ASTNodeUP DILParser::ParseCastExpression() {
 //    postfix_expression
 //    unary_operator cast_expression
 //
-//  unary_operator:
-//    "&"
-//    "*"
+//  unary_operator = "*" | "&" | "+" | "-" | "!" | "~"
 //
 ASTNodeUP DILParser::ParseUnaryExpression() {
-  if (CurToken().IsOneOf(
-          {Token::amp, Token::star, Token::minus, Token::plus})) {
+  if (CurToken().IsOneOf({Token::amp, Token::star, Token::minus, Token::plus,
+                          Token::exclaim, Token::tilde})) {
     Token token = CurToken();
     uint32_t loc = token.GetLocation();
     m_dil_lexer.Advance();
@@ -449,6 +447,12 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
                                            std::move(rhs));
     case Token::plus:
       return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Plus,
+                                           std::move(rhs));
+    case Token::exclaim:
+      return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::LNot,
+                                           std::move(rhs));
+    case Token::tilde:
+      return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Not,
                                            std::move(rhs));
     default:
       llvm_unreachable("invalid token kind");
