@@ -1196,6 +1196,8 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
   }
   if (val_type.IsArrayType())
     return GetAddressOf().address != 0;
+  if (val_type.IsNullPtrType())
+    return false;
 
   return llvm::make_error<llvm::StringError>("type cannot be converted to bool",
                                              llvm::inconvertibleErrorCode());
