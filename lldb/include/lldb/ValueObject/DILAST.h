@@ -24,6 +24,7 @@ enum class NodeKind {
   eBitExtractionNode,
   eBooleanLiteralNode,
   eCStyleCastNode,
+  eConditionalNode,
   eErrorNode,
   eFloatLiteralNode,
   eIdentifierNode,
@@ -355,6 +356,30 @@ private:
   CStyleCastKind m_cast_kind;
 };
 
+class ConditionalNode : public ASTNode {
+public:
+  ConditionalNode(uint32_t location, ASTNodeUP condition, ASTNodeUP true_op,
+                  ASTNodeUP false_op)
+      : ASTNode(location, NodeKind::eConditionalNode),
+        m_condition(std::move(condition)), m_true_op(std::move(true_op)),
+        m_false_op(std::move(false_op)) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  ASTNode *GetCondition() const { return m_condition.get(); }
+  ASTNode *GetTrueOperand() const { return m_true_op.get(); }
+  ASTNode *GetFalseOperand() const { return m_false_op.get(); }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eConditionalNode;
+  }
+
+private:
+  ASTNodeUP m_condition;
+  ASTNodeUP m_true_op;
+  ASTNodeUP m_false_op;
+};
+
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
@@ -384,6 +409,8 @@ public:
   Visit(const PointerLiteralNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const CStyleCastNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const ConditionalNode *node) = 0;
 };
 
 } // namespace lldb_private::dil

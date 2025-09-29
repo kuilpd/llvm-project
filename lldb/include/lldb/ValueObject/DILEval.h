@@ -67,6 +67,8 @@ private:
   Visit(const PointerLiteralNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const CStyleCastNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const ConditionalNode *node) override;
 
   lldb::ValueObjectSP
   ConvertValueObjectToTypeSystem(lldb::ValueObjectSP valobj,

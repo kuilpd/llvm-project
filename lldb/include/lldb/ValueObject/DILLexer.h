@@ -54,6 +54,7 @@ public:
     plus,
     pipe,
     pipepipe,
+    question,
     r_paren,
     r_square,
     slash,

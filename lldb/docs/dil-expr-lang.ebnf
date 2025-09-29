@@ -3,7 +3,10 @@
 (* This is currently a subset of the final DIL Language, matching the current
    DIL implementation. *)
 
-expression = logical_or_expression ;
+expression = conditional_expression ;
+
+conditional_expression = logical_or_expression
+                       | logical_or_expression "?" expression ":" expression ;
 
 logical_or_expression = logical_and_expression {"||" logical_and_expression} ;
 
