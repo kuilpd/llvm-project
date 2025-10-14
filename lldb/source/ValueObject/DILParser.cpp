@@ -494,6 +494,7 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
 //    postfix_expression "[" expression ":" expression "]"
 //    postfix_expression "." id_expression
 //    postfix_expression "->" id_expression
+//    postfix_expression "." id_expression "(" ")"
 //
 ASTNodeUP DILParser::ParsePostfixExpression() {
   ASTNodeUP lhs = ParsePrimaryExpression();
@@ -517,14 +518,28 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
       m_dil_lexer.Advance();
       break;
     }
-    case Token::period:
+    case Token::period: {
+      m_dil_lexer.Advance();
+      Token member_token = CurToken();
+      std::string id = ParseIdExpression();
+      if (CurToken().Is(Token::l_paren)) {
+        m_dil_lexer.Advance();
+        Expect(Token::r_paren);
+        m_dil_lexer.Advance();
+        lhs = std::make_unique<MethodCallNode>(member_token.GetLocation(),
+                                               std::move(lhs), id);
+      } else {
+        lhs = std::make_unique<MemberOfNode>(member_token.GetLocation(),
+                                             std::move(lhs), false, id);
+      }
+      break;
+    }
     case Token::arrow: {
       m_dil_lexer.Advance();
       Token member_token = CurToken();
       std::string member_id = ParseIdExpression();
-      lhs = std::make_unique<MemberOfNode>(
-          member_token.GetLocation(), std::move(lhs),
-          token.GetKind() == Token::arrow, member_id);
+      lhs = std::make_unique<MemberOfNode>(member_token.GetLocation(),
+                                           std::move(lhs), true, member_id);
       break;
     }
     default:

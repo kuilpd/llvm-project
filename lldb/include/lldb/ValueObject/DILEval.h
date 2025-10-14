@@ -69,6 +69,10 @@ private:
   Visit(const CStyleCastNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const ConditionalNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const FunctionCallNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const MethodCallNode *node) override;
 
   lldb::ValueObjectSP
   ConvertValueObjectToTypeSystem(lldb::ValueObjectSP valobj,

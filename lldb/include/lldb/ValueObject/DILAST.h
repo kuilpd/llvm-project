@@ -27,9 +27,11 @@ enum class NodeKind {
   eConditionalNode,
   eErrorNode,
   eFloatLiteralNode,
+  eFunctionCallNode,
   eIdentifierNode,
   eIntegerLiteralNode,
   eMemberOfNode,
+  eMethodCallNode,
   ePointerLiteralNode,
   eUnaryOpNode,
 };
@@ -380,6 +382,44 @@ private:
   ASTNodeUP m_false_op;
 };
 
+class FunctionCallNode : public ASTNode {
+public:
+  FunctionCallNode(uint32_t location, std::string name)
+      : ASTNode(location, NodeKind::eFunctionCallNode),
+        m_name(std::move(name)) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  const std::string &GetFunctionName() const { return m_name; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eFunctionCallNode;
+  }
+
+private:
+  std::string m_name;
+};
+
+class MethodCallNode : public ASTNode {
+public:
+  MethodCallNode(uint32_t location, ASTNodeUP object, std::string name)
+      : ASTNode(location, NodeKind::eMethodCallNode),
+        m_object(std::move(object)), m_name(std::move(name)) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  ASTNode *GetObject() const { return m_object.get(); }
+  const std::string &GetMethodName() const { return m_name; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eMethodCallNode;
+  }
+
+private:
+  ASTNodeUP m_object;
+  std::string m_name;
+};
+
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
@@ -411,6 +451,10 @@ public:
   Visit(const CStyleCastNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const ConditionalNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const FunctionCallNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const MethodCallNode *node) = 0;
 };
 
 } // namespace lldb_private::dil

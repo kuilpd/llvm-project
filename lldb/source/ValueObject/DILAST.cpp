@@ -112,4 +112,12 @@ llvm::Expected<lldb::ValueObjectSP> ConditionalNode::Accept(Visitor *v) const {
   return v->Visit(this);
 }
 
+llvm::Expected<lldb::ValueObjectSP> FunctionCallNode::Accept(Visitor *v) const {
+  return v->Visit(this);
+}
+
+llvm::Expected<lldb::ValueObjectSP> MethodCallNode::Accept(Visitor *v) const {
+  return v->Visit(this);
+}
+
 } // namespace lldb_private::dil
