@@ -556,8 +556,10 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
 //    numeric_literal
 //    boolean_literal
 //    id_expression
-//    id_expression "(" ")"
 //    "(" expression ")"
+//    id_expression "(" ")"
+//    "sizeof" "(" expression ")
+//    "sizeof" "(" type_id ")" ;
 //
 ASTNodeUP DILParser::ParsePrimaryExpression() {
   if (CurToken().IsOneOf({Token::integer_constant, Token::float_constant}))
@@ -575,6 +577,20 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
     if (!identifier.empty()) {
       if (CurToken().Is(Token::l_paren)) {
         m_dil_lexer.Advance();
+        if (identifier == "sizeof") {
+          uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
+          auto type_id = ParseTypeId();
+          if (type_id) {
+            Expect(Token::r_paren);
+            m_dil_lexer.Advance();
+            return std::make_unique<SizeOfNode>(loc, *type_id);
+          }
+          TentativeParsingRollback(save_token_idx);
+          ASTNodeUP expr = ParseExpression();
+          Expect(Token::r_paren);
+          m_dil_lexer.Advance();
+          return std::make_unique<SizeOfNode>(loc, std::move(expr));
+        }
         Expect(Token::r_paren);
         m_dil_lexer.Advance();
         return std::make_unique<FunctionCallNode>(loc, identifier);

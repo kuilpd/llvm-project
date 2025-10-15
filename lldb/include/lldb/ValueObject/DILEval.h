@@ -73,6 +73,7 @@ private:
   Visit(const FunctionCallNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const MethodCallNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const SizeOfNode *node) override;
 
   lldb::ValueObjectSP
   ConvertValueObjectToTypeSystem(lldb::ValueObjectSP valobj,

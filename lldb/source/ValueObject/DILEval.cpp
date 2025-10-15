@@ -1883,11 +1883,11 @@ Interpreter::Visit(const FunctionCallNode *node) {
     return llvm::make_error<DILDiagnosticError>(
         m_expr, "missing context for a function lookup", node->GetLocation());
 
-  std::string func_name = node->GetFunctionName();
   SymbolContextList sc_list;
   ModuleFunctionSearchOptions function_options;
   function_options.include_symbols = true;
   function_options.include_inlines = true;
+  std::string func_name = node->GetFunctionName();
   target->GetImages().FindFunctions(ConstString(func_name),
                                     lldb::eFunctionNameTypeAuto,
                                     function_options, sc_list);
@@ -2021,6 +2021,36 @@ Interpreter::Visit(const MethodCallNode *node) {
   }
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "unable to retrieve function return value", node->GetLocation());
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const SizeOfNode *node) {
+  CompilerType typearg = node->GetTypeArg();
+  Scalar size;
+  if (typearg.IsValid()) {
+    llvm::Expected<uint64_t> byte_size = typearg.GetByteSize(m_target.get());
+    if (!byte_size)
+      return byte_size.takeError();
+    size = *byte_size;
+  } else {
+    auto arg_or_err = EvaluateAndDereference(node->GetNodeArg());
+    if (!arg_or_err)
+      return arg_or_err;
+    lldb::ValueObjectSP arg = *arg_or_err;
+
+    llvm::Expected<uint64_t> byte_size = arg->GetByteSize();
+    if (!byte_size)
+      return byte_size.takeError();
+    size = *byte_size;
+  }
+
+  llvm::Expected<lldb::TypeSystemSP> type_system =
+      DILGetTypeSystemFromCU(m_exe_ctx_scope);
+  if (!type_system)
+    return type_system.takeError();
+  CompilerType type = GetBasicType(*type_system, lldb::eBasicTypeUnsignedInt);
+
+  return ValueObject::CreateValueObjectFromScalar(m_target, size, type,
+                                                  "result");
 }
 
 } // namespace lldb_private::dil

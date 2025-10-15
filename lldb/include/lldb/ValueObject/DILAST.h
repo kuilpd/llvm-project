@@ -33,6 +33,7 @@ enum class NodeKind {
   eMemberOfNode,
   eMethodCallNode,
   ePointerLiteralNode,
+  eSizeOfNode,
   eUnaryOpNode,
 };
 
@@ -382,6 +383,30 @@ private:
   ASTNodeUP m_false_op;
 };
 
+class SizeOfNode : public ASTNode {
+public:
+  SizeOfNode(uint32_t location, ASTNodeUP node)
+      : ASTNode(location, NodeKind::eSizeOfNode), m_node_arg(std::move(node)) {}
+
+  SizeOfNode(uint32_t location, CompilerType type)
+      : ASTNode(location, NodeKind::eSizeOfNode), m_type_arg(type) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  const std::string &GetFunctionName() const { return m_name; }
+  ASTNode *GetNodeArg() const { return m_node_arg.get(); }
+  CompilerType GetTypeArg() const { return m_type_arg; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eSizeOfNode;
+  }
+
+private:
+  std::string m_name;
+  ASTNodeUP m_node_arg;
+  CompilerType m_type_arg;
+};
+
 class FunctionCallNode : public ASTNode {
 public:
   FunctionCallNode(uint32_t location, std::string name)
@@ -455,6 +480,7 @@ public:
   Visit(const FunctionCallNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const MethodCallNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP> Visit(const SizeOfNode *node) = 0;
 };
 
 } // namespace lldb_private::dil
