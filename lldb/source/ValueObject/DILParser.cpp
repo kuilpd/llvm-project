@@ -556,6 +556,7 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
 //    numeric_literal
 //    boolean_literal
 //    id_expression
+//    id_expression "(" ")"
 //    "(" expression ")"
 //
 ASTNodeUP DILParser::ParsePrimaryExpression() {
@@ -571,8 +572,15 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
     uint32_t loc = CurToken().GetLocation();
     std::string identifier = ParseIdExpression();
 
-    if (!identifier.empty())
+    if (!identifier.empty()) {
+      if (CurToken().Is(Token::l_paren)) {
+        m_dil_lexer.Advance();
+        Expect(Token::r_paren);
+        m_dil_lexer.Advance();
+        return std::make_unique<FunctionCallNode>(loc, identifier);
+      }
       return std::make_unique<IdentifierNode>(loc, identifier);
+    }
   }
 
   if (CurToken().Is(Token::l_paren)) {

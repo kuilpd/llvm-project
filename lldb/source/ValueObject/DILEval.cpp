@@ -1874,8 +1874,71 @@ Interpreter::Visit(const ConditionalNode *node) {
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const FunctionCallNode *node) {
-  return llvm::make_error<DILDiagnosticError>(m_expr, "unimplemented",
-                                              node->GetLocation());
+  auto target = m_exe_ctx_scope->CalculateTarget();
+  auto process = m_exe_ctx_scope->CalculateProcess();
+  auto thread = m_exe_ctx_scope->CalculateThread();
+  ExecutionContext exe_ctx;
+  m_exe_ctx_scope->CalculateExecutionContext(exe_ctx);
+  if (!target || !process || !thread)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "missing context for a function lookup", node->GetLocation());
+
+  std::string func_name = node->GetFunctionName();
+  SymbolContextList sc_list;
+  ModuleFunctionSearchOptions function_options;
+  function_options.include_symbols = true;
+  function_options.include_inlines = true;
+  target->GetImages().FindFunctions(ConstString(func_name),
+                                    lldb::eFunctionNameTypeAuto,
+                                    function_options, sc_list);
+
+  if (sc_list.IsEmpty()) {
+    std::string errMsg =
+        llvm::formatv("use of undeclared identifier '{0}'", func_name);
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                node->GetLocation());
+  }
+  if (sc_list.GetSize() >= 2) {
+    std::string errMsg = llvm::formatv("call to '{0}' is ambiguous", func_name);
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                node->GetLocation());
+  }
+
+  SymbolContext sc;
+  sc_list.GetContextAtIndex(0, sc);
+  Address call_addr = sc.function->GetAddress();
+  CompilerType rettype = sc.function->GetCompilerType().GetFunctionReturnType();
+  llvm::ArrayRef<lldb::addr_t> arr_args;
+
+  // Create, validate, and run ThreadPlanCallFunction
+  lldb::ABISP abi_sp = process->GetABI();
+  lldb_private::EvaluateExpressionOptions options;
+  lldb::ThreadPlanSP call_plan_sp(new ThreadPlanCallFunction(
+      *thread, call_addr, rettype, arr_args, options));
+  StreamString error;
+  if (!call_plan_sp || !call_plan_sp->ValidatePlan(&error)) {
+    std::string message = llvm::formatv("function call validation failed: {0}",
+                                        error.GetString());
+    return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                node->GetLocation());
+  }
+  lldb_private::DiagnosticManager diagnostics;
+  lldb::ExpressionResults expr_result =
+      process->RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
+  if (expr_result != lldb::eExpressionCompleted) {
+    std::string errMsg =
+        llvm::formatv("function call failed: {0}", toString(expr_result));
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                node->GetLocation());
+  }
+
+  lldb::ValueObjectSP ret_val = call_plan_sp->GetReturnValueObject();
+  if (ret_val) {
+    ret_val->SetName(ConstString("result"));
+    return ret_val;
+  }
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr, "unable to retrieve function return value", node->GetLocation());
 }
 
 llvm::Expected<lldb::ValueObjectSP>
@@ -1893,6 +1956,7 @@ Interpreter::Visit(const MethodCallNode *node) {
   if (!obj_or_err)
     return obj_or_err;
   lldb::ValueObjectSP object = *obj_or_err;
+  // TODO: check if the object is a structure or union
 
   // Form a fully qualified name
   std::string func_name = node->GetMethodName();
@@ -1917,21 +1981,10 @@ Interpreter::Visit(const MethodCallNode *node) {
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                 node->GetLocation());
   }
-  // printf("FindFunctions('%s') = %s\n",
-  //       qualified_func.c_str(), sc_list[0].GetFunctionName().GetCString());
+
   sc_list.GetContextAtIndex(0, sc);
   Address call_addr = sc.function->GetAddress();
   CompilerType rettype = sc.function->GetCompilerType().GetFunctionReturnType();
-
-  // StreamString ss;
-  // sc.function->GetDescription(&ss, lldb::eDescriptionLevelVerbose,
-  // target.get()); printf("%s\n", ss.GetString().str().c_str()); auto dc =
-  // sc.function->GetDeclContext().GetName(); auto dcsqn =
-  // sc.function->GetDeclContext().GetScopeQualifiedName(); auto scs =
-  // sc.function->CalculateSymbolContextSymbol()->GetName();
-  // printf("decl_context: %s\n", dc.GetString().c_str());
-  // printf("GetScopeQualifiedName: %s\n", dcsqn.GetString().c_str());
-  // printf("SymbolContextSymbol: %s\n", scs.GetString().c_str());
 
   // Prepare arguments, object address is the 1st argument
   llvm::SmallVector<lldb::addr_t, 1> args;
