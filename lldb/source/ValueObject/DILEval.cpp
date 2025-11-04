@@ -1885,8 +1885,6 @@ Interpreter::Visit(const FunctionCallNode *node) {
 
   SymbolContextList sc_list;
   ModuleFunctionSearchOptions function_options;
-  function_options.include_symbols = true;
-  function_options.include_inlines = true;
   std::string func_name = node->GetFunctionName();
   target->GetImages().FindFunctions(ConstString(func_name),
                                     lldb::eFunctionNameTypeAuto,
@@ -1898,14 +1896,20 @@ Interpreter::Visit(const FunctionCallNode *node) {
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                 node->GetLocation());
   }
-  if (sc_list.GetSize() >= 2) {
+
+  SymbolContextList funcs_noargs;
+  for (auto sc : sc_list) {
+    if (sc.function->GetCompilerType().GetFunctionArgumentCount() == 0)
+      funcs_noargs.Append(sc);
+  }
+  if (funcs_noargs.GetSize() > 1) {
     std::string errMsg = llvm::formatv("call to '{0}' is ambiguous", func_name);
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                 node->GetLocation());
   }
 
   SymbolContext sc;
-  sc_list.GetContextAtIndex(0, sc);
+  funcs_noargs.GetContextAtIndex(0, sc);
   Address call_addr = sc.function->GetAddress();
   CompilerType rettype = sc.function->GetCompilerType().GetFunctionReturnType();
   llvm::ArrayRef<lldb::addr_t> arr_args;
@@ -1956,11 +1960,15 @@ Interpreter::Visit(const MethodCallNode *node) {
   if (!obj_or_err)
     return obj_or_err;
   lldb::ValueObjectSP object = *obj_or_err;
+  CompilerType obj_type = object->IsPointerType()
+                              ? object->GetCompilerType().GetPointeeType()
+                              : object->GetCompilerType();
+
   // TODO: check if the object is a structure or union
 
   // Form a fully qualified name
   std::string func_name = node->GetMethodName();
-  std::string base_type = object->GetQualifiedTypeName().GetString();
+  std::string base_type = obj_type.GetTypeName().GetString();
   std::string qualified_func = base_type;
   qualified_func.append("::").append(func_name);
   SymbolContextList sc_list;
@@ -1988,7 +1996,8 @@ Interpreter::Visit(const MethodCallNode *node) {
 
   // Prepare arguments, object address is the 1st argument
   llvm::SmallVector<lldb::addr_t, 1> args;
-  lldb::addr_t obj = object->GetLoadAddress();
+  lldb::addr_t obj = object->IsPointerType() ? object->GetPointerValue().address
+                                             : object->GetLoadAddress();
   args.push_back(obj);
   auto arr_args = llvm::ArrayRef<lldb::addr_t>(args);
 
