@@ -1885,7 +1885,8 @@ Interpreter::Visit(const FunctionCallNode *node) {
 
   SymbolContextList sc_list;
   ModuleFunctionSearchOptions function_options;
-  std::string func_name = node->GetFunctionName();
+  llvm::StringRef func_name = node->GetFunctionName();
+  func_name.consume_front("::");
   target->GetImages().FindFunctions(ConstString(func_name),
                                     lldb::eFunctionNameTypeAuto,
                                     function_options, sc_list);
@@ -1897,19 +1898,38 @@ Interpreter::Visit(const FunctionCallNode *node) {
                                                 node->GetLocation());
   }
 
-  SymbolContextList funcs_noargs;
+  // TODO: filter out anything inside classes (constructors, members, static
+  // funcs etc): ? sc.function->GetDeclContext().IsClassMethod() ?
+  // sc.function->GetCompilerType().IsMemberFunctionPointerType()
+  SymbolContextList full_matches;
+  SymbolContextList partial_matches;
   for (auto sc : sc_list) {
-    if (sc.function->GetCompilerType().GetFunctionArgumentCount() == 0)
-      funcs_noargs.Append(sc);
+    if (sc.function->GetCompilerType().GetFunctionArgumentCount() == 0) {
+      auto name = sc.function->GetNameNoArguments().GetStringRef();
+      if (name == func_name)
+        full_matches.Append(sc);
+      else if (name.ends_with(func_name))
+        partial_matches.Append(sc);
+    }
   }
-  if (funcs_noargs.GetSize() > 1) {
+
+  if (full_matches.GetSize() > 1 || partial_matches.GetSize() > 1) {
     std::string errMsg = llvm::formatv("call to '{0}' is ambiguous", func_name);
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                 node->GetLocation());
   }
-
   SymbolContext sc;
-  funcs_noargs.GetContextAtIndex(0, sc);
+  if (full_matches.GetSize() == 1)
+    full_matches.GetContextAtIndex(0, sc);
+  else if (partial_matches.GetSize() == 1)
+    partial_matches.GetContextAtIndex(0, sc);
+  else {
+    std::string errMsg =
+        llvm::formatv("no matching function for call to '{0}'", func_name);
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                node->GetLocation());
+  }
+
   Address call_addr = sc.function->GetAddress();
   CompilerType rettype = sc.function->GetCompilerType().GetFunctionReturnType();
   llvm::ArrayRef<lldb::addr_t> arr_args;
@@ -1977,20 +1997,31 @@ Interpreter::Visit(const MethodCallNode *node) {
                                     lldb::eFunctionNameTypeAuto,
                                     function_options, sc_list);
 
-  SymbolContext sc;
-  if (sc_list.IsEmpty()) {
+  // TODO: filter out constructors (and anything other than methods)
+  SymbolContextList full_matches;
+  for (auto sc : sc_list) {
+    if (sc.function->GetCompilerType().GetFunctionArgumentCount() == 0) {
+      auto name = sc.function->GetNameNoArguments().GetStringRef();
+      if (name == qualified_func)
+        full_matches.Append(sc);
+    }
+  }
+
+  if (full_matches.IsEmpty()) {
     std::string errMsg =
         llvm::formatv("no member named '{0}' in '{1}'", func_name, base_type);
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                 node->GetLocation());
   }
-  if (sc_list.GetSize() >= 2) {
-    std::string errMsg = llvm::formatv("call to '{0}' is ambiguous", func_name);
+  if (full_matches.GetSize() > 1) {
+    std::string errMsg =
+        llvm::formatv("call to member function '{0}' is ambiguous", func_name);
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                 node->GetLocation());
   }
 
-  sc_list.GetContextAtIndex(0, sc);
+  SymbolContext sc;
+  full_matches.GetContextAtIndex(0, sc);
   Address call_addr = sc.function->GetAddress();
   CompilerType rettype = sc.function->GetCompilerType().GetFunctionReturnType();
 
