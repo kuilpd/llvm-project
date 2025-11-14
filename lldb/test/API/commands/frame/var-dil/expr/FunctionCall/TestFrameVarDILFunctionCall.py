@@ -41,3 +41,8 @@ class TestFrameVarDILFunctionCall(TestBase):
         self.expect_var_path("base.method()", value="399")
         self.expect_var_path("p_nsbase->func2()", value="200")
         self.expect_var_path("base.func2()", value="201")
+        self.expect(
+            "frame var -- 'base.Base()'",
+            error=True,
+            substrs=["no member named 'Base' in 'Base"],
+        )

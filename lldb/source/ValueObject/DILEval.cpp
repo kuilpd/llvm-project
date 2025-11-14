@@ -1898,22 +1898,52 @@ Interpreter::Visit(const FunctionCallNode *node) {
                                                 node->GetLocation());
   }
 
-  // TODO: filter out anything inside classes (constructors, members, static
-  // funcs etc): ? sc.function->GetDeclContext().IsClassMethod() ?
-  // sc.function->GetCompilerType().IsMemberFunctionPointerType()
   SymbolContextList full_matches;
   SymbolContextList partial_matches;
+  SymbolContextList method_matches;
   for (auto sc : sc_list) {
+    // Filter by argument count and name
     if (sc.function->GetCompilerType().GetFunctionArgumentCount() == 0) {
       auto name = sc.function->GetNameNoArguments().GetStringRef();
-      if (name == func_name)
-        full_matches.Append(sc);
-      else if (name.ends_with(func_name))
-        partial_matches.Append(sc);
+      if (sc.function->GetDeclContext().IsClassMethod()) {
+        if (name == func_name)
+          method_matches.Append(sc);
+      } else {
+        if (name == func_name)
+          full_matches.Append(sc);
+        else if (name.ends_with(func_name))
+          partial_matches.Append(sc);
+      }
     }
   }
 
-  if (full_matches.GetSize() > 1 || partial_matches.GetSize() > 1) {
+  int static_method_matches = 0;
+  if (full_matches.GetSize() == 0 && partial_matches.GetSize() == 0 &&
+      method_matches.GetSize() != 0) {
+    // No function matches, check the methods by looking up the base object
+    // TODO: write GetMemberFunction like DeclContextIsClassMethod
+    auto last_ns = func_name.rfind("::");
+    if (last_ns != llvm::StringRef::npos) {
+      auto [base_name, method_name] = func_name.rsplit("::");
+      auto base_type = ResolveTypeByName(base_name.str(), m_exe_ctx_scope);
+      if (base_type) {
+        for (size_t i = 0; i < base_type.GetNumMemberFunctions(); i++) {
+          TypeMemberFunctionImpl member_func =
+              base_type.GetMemberFunctionAtIndex(i);
+          auto name = member_func.GetName();
+          bool is_static =
+              member_func.GetKind() == lldb::eMemberFunctionKindStaticMethod;
+          if (is_static && name == method_name &&
+              member_func.GetType() ==
+                  method_matches[0].function->GetCompilerType())
+            static_method_matches++;
+        }
+      }
+    }
+  }
+
+  if (full_matches.GetSize() > 1 || partial_matches.GetSize() > 1 ||
+      static_method_matches > 1) {
     std::string errMsg = llvm::formatv("call to '{0}' is ambiguous", func_name);
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                 node->GetLocation());
@@ -1923,6 +1953,8 @@ Interpreter::Visit(const FunctionCallNode *node) {
     full_matches.GetContextAtIndex(0, sc);
   else if (partial_matches.GetSize() == 1)
     partial_matches.GetContextAtIndex(0, sc);
+  else if (method_matches.GetSize() == 1)
+    method_matches.GetContextAtIndex(0, sc);
   else {
     std::string errMsg =
         llvm::formatv("no matching function for call to '{0}'", func_name);
@@ -1987,22 +2019,34 @@ Interpreter::Visit(const MethodCallNode *node) {
   // TODO: check if the object is a structure or union
 
   // Form a fully qualified name
-  std::string func_name = node->GetMethodName();
+  std::string func_name = node->GetMethodName().str();
   std::string base_type = obj_type.GetTypeName().GetString();
   std::string qualified_func = base_type;
   qualified_func.append("::").append(func_name);
   SymbolContextList sc_list;
   ModuleFunctionSearchOptions function_options;
   target->GetImages().FindFunctions(ConstString(qualified_func),
-                                    lldb::eFunctionNameTypeAuto,
+                                    lldb::eFunctionNameTypeMethod,
                                     function_options, sc_list);
 
-  // TODO: filter out constructors (and anything other than methods)
   SymbolContextList full_matches;
   for (auto sc : sc_list) {
-    if (sc.function->GetCompilerType().GetFunctionArgumentCount() == 0) {
-      auto name = sc.function->GetNameNoArguments().GetStringRef();
-      if (name == qualified_func)
+    // Compare number of arguments, 0 for now
+    if (sc.function->GetCompilerType().GetFunctionArgumentCount() != 0)
+      continue;
+    // Check the name
+    auto name = sc.function->GetNameNoArguments().GetStringRef();
+    if (name != qualified_func)
+      continue;
+    // Filter out constructors and destructors by checking each member function
+    // of the base object
+    for (size_t i = 0; i < obj_type.GetNumMemberFunctions(); i++) {
+      TypeMemberFunctionImpl member_func = obj_type.GetMemberFunctionAtIndex(i);
+      bool is_method =
+          member_func.GetKind() == lldb::eMemberFunctionKindInstanceMethod ||
+          member_func.GetKind() == lldb::eMemberFunctionKindStaticMethod;
+      if (is_method && member_func.GetName() == node->GetMethodName() &&
+          member_func.GetType() == sc.function->GetCompilerType())
         full_matches.Append(sc);
     }
   }

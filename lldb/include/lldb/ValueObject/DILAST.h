@@ -409,32 +409,31 @@ private:
 
 class FunctionCallNode : public ASTNode {
 public:
-  FunctionCallNode(uint32_t location, std::string name)
-      : ASTNode(location, NodeKind::eFunctionCallNode),
-        m_name(std::move(name)) {}
+  FunctionCallNode(uint32_t location, llvm::StringRef name)
+      : ASTNode(location, NodeKind::eFunctionCallNode), m_name(name) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  const std::string &GetFunctionName() const { return m_name; }
+  llvm::StringRef GetFunctionName() const { return m_name; }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eFunctionCallNode;
   }
 
 private:
-  std::string m_name;
+  ConstString m_name;
 };
 
 class MethodCallNode : public ASTNode {
 public:
-  MethodCallNode(uint32_t location, ASTNodeUP object, std::string name)
+  MethodCallNode(uint32_t location, ASTNodeUP object, llvm::StringRef name)
       : ASTNode(location, NodeKind::eMethodCallNode),
-        m_object(std::move(object)), m_name(std::move(name)) {}
+        m_object(std::move(object)), m_name(name) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
   ASTNode *GetObject() const { return m_object.get(); }
-  const std::string &GetMethodName() const { return m_name; }
+  llvm::StringRef GetMethodName() const { return m_name; }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eMethodCallNode;
@@ -442,7 +441,7 @@ public:
 
 private:
   ASTNodeUP m_object;
-  std::string m_name;
+  ConstString m_name;
 };
 
 /// This class contains one Visit method for each specialized type of

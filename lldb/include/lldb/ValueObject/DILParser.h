@@ -35,6 +35,10 @@ enum class ErrorCode : unsigned char {
 llvm::Expected<lldb::TypeSystemSP>
 DILGetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx);
 
+CompilerType
+ResolveTypeByName(const std::string &name,
+                  std::shared_ptr<ExecutionContextScope> ctx_scope);
+
 // The following is modeled on class OptionParseError.
 class DILDiagnosticError
     : public llvm::ErrorInfo<DILDiagnosticError, DiagnosticError> {

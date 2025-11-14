@@ -9,10 +9,12 @@ struct Base {
   int member;
   static int func2() { return 200; }
   virtual int method() { return 100 + member; }
+  virtual int method(int i) { return 100 + i; }
 };
 struct Derived : Base {
   Derived(int m) : Base(m) {}
   int method() override { return 200 + member; }
+  int method(int i) override { return 200 + i; }
 };
 } // namespace ns
 
@@ -24,7 +26,10 @@ struct Base {
   int member = 99;
   static const int array[];
   static int func2() { return 201; }
+  static int func2(float f) { return f + 202; }
+  static int func2(double d) { return d + 203; }
   int method() { return 300 + member; }
+  int method(int i) { return 300 + i; }
   int ambiguous(float f) { return 10; }
   int ambiguous(double d) { return 20; }
 };
