@@ -73,6 +73,13 @@ public:
   ///     in a struct, union or class.
   bool IsClassMethod();
 
+  /// Get this decl context as a member function.
+  ///
+  /// \return
+  ///     Returns an empty TypeMemberFunctionImpl() if this decl context is
+  ///     not a member function.
+  TypeMemberFunctionImpl GetAsMemberFunction();
+
   /// Determines the original language of the decl context.
   lldb::LanguageType GetLanguage();
 

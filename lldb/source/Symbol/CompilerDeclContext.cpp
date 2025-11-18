@@ -40,6 +40,13 @@ bool CompilerDeclContext::IsClassMethod() {
   return false;
 }
 
+TypeMemberFunctionImpl CompilerDeclContext::GetAsMemberFunction() {
+  if (IsValid()) {
+    return m_type_system->GetAsMemberFunction(m_opaque_decl_ctx);
+  }
+  return TypeMemberFunctionImpl();
+}
+
 lldb::LanguageType CompilerDeclContext::GetLanguage() {
   if (IsValid())
     return m_type_system->DeclContextGetLanguage(m_opaque_decl_ctx);

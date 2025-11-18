@@ -275,6 +275,8 @@ public:
   virtual CompilerType
   GetFunctionReturnType(lldb::opaque_compiler_type_t type) = 0;
 
+  virtual TypeMemberFunctionImpl GetAsMemberFunction(void *opaque_decl_ctx) = 0;
+
   virtual size_t GetNumMemberFunctions(lldb::opaque_compiler_type_t type) = 0;
 
   virtual TypeMemberFunctionImpl

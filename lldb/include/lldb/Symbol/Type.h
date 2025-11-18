@@ -846,6 +846,8 @@ public:
 
   bool GetDescription(Stream &stream);
 
+  explicit operator bool() { return IsValid(); }
+
 protected:
   std::string GetPrintableTypeName();
 

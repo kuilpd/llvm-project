@@ -773,6 +773,14 @@ public:
   CompilerType
   GetFunctionReturnType(lldb::opaque_compiler_type_t type) override;
 
+  TypeMemberFunctionImpl
+  GetMemberFunctionFromCXXMethodDecl(clang::CXXMethodDecl *cxx_method_decl);
+
+  TypeMemberFunctionImpl
+  GetMemberFunctionFromObjCMethodDecl(clang::ObjCMethodDecl *objc_method_decl);
+
+  TypeMemberFunctionImpl GetAsMemberFunction(void *opaque_decl_ctx) override;
+
   size_t GetNumMemberFunctions(lldb::opaque_compiler_type_t type) override;
 
   TypeMemberFunctionImpl

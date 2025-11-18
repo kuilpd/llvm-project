@@ -4402,6 +4402,59 @@ TypeSystemClang::GetFunctionReturnType(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
 
+TypeMemberFunctionImpl TypeSystemClang::GetMemberFunctionFromCXXMethodDecl(
+    clang::CXXMethodDecl *cxx_method_decl) {
+  if (!cxx_method_decl)
+    return TypeMemberFunctionImpl();
+
+  std::string name = cxx_method_decl->getDeclName().getAsString();
+  MemberFunctionKind kind(MemberFunctionKind::eMemberFunctionKindUnknown);
+  if (cxx_method_decl->isStatic())
+    kind = lldb::eMemberFunctionKindStaticMethod;
+  else if (llvm::isa<clang::CXXConstructorDecl>(cxx_method_decl))
+    kind = lldb::eMemberFunctionKindConstructor;
+  else if (llvm::isa<clang::CXXDestructorDecl>(cxx_method_decl))
+    kind = lldb::eMemberFunctionKindDestructor;
+  else
+    kind = lldb::eMemberFunctionKindInstanceMethod;
+  CompilerType clang_type = GetType(cxx_method_decl->getType());
+  CompilerDecl clang_decl = GetCompilerDecl(cxx_method_decl);
+  return TypeMemberFunctionImpl(clang_type, clang_decl, name, kind);
+}
+
+TypeMemberFunctionImpl TypeSystemClang::GetMemberFunctionFromObjCMethodDecl(
+    clang::ObjCMethodDecl *objc_method_decl) {
+  if (!objc_method_decl)
+    return TypeMemberFunctionImpl();
+
+  MemberFunctionKind kind(MemberFunctionKind::eMemberFunctionKindUnknown);
+  CompilerType clang_type;
+  CompilerDecl clang_decl = GetCompilerDecl(objc_method_decl);
+  std::string name = objc_method_decl->getSelector().getAsString();
+  if (objc_method_decl->isClassMethod())
+    kind = lldb::eMemberFunctionKindStaticMethod;
+  else
+    kind = lldb::eMemberFunctionKindInstanceMethod;
+  return TypeMemberFunctionImpl(clang_type, clang_decl, name, kind);
+}
+
+TypeMemberFunctionImpl
+TypeSystemClang::GetAsMemberFunction(void *opaque_decl_ctx) {
+  if (!opaque_decl_ctx)
+    return TypeMemberFunctionImpl();
+
+  clang::DeclContext *decl_ctx =
+      static_cast<clang::DeclContext *>(opaque_decl_ctx);
+  if (clang::CXXMethodDecl *cxx_method_decl =
+          llvm::dyn_cast<clang::CXXMethodDecl>(decl_ctx))
+    return GetMemberFunctionFromCXXMethodDecl(cxx_method_decl);
+  if (clang::ObjCMethodDecl *objc_method_decl =
+          llvm::dyn_cast<clang::ObjCMethodDecl>(decl_ctx))
+    return GetMemberFunctionFromObjCMethodDecl(objc_method_decl);
+
+  return TypeMemberFunctionImpl();
+}
+
 size_t
 TypeSystemClang::GetNumMemberFunctions(lldb::opaque_compiler_type_t type) {
   size_t num_functions = 0;
@@ -4458,10 +4511,6 @@ TypeSystemClang::GetNumMemberFunctions(lldb::opaque_compiler_type_t type) {
 TypeMemberFunctionImpl
 TypeSystemClang::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
                                           size_t idx) {
-  std::string name;
-  MemberFunctionKind kind(MemberFunctionKind::eMemberFunctionKindUnknown);
-  CompilerType clang_type;
-  CompilerDecl clang_decl;
   if (type) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
     switch (qual_type->getTypeClass()) {
@@ -4475,19 +4524,7 @@ TypeSystemClang::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
             std::advance(method_iter, idx);
             clang::CXXMethodDecl *cxx_method_decl =
                 method_iter->getCanonicalDecl();
-            if (cxx_method_decl) {
-              name = cxx_method_decl->getDeclName().getAsString();
-              if (cxx_method_decl->isStatic())
-                kind = lldb::eMemberFunctionKindStaticMethod;
-              else if (llvm::isa<clang::CXXConstructorDecl>(cxx_method_decl))
-                kind = lldb::eMemberFunctionKindConstructor;
-              else if (llvm::isa<clang::CXXDestructorDecl>(cxx_method_decl))
-                kind = lldb::eMemberFunctionKindDestructor;
-              else
-                kind = lldb::eMemberFunctionKindInstanceMethod;
-              clang_type = GetType(cxx_method_decl->getType());
-              clang_decl = GetCompilerDecl(cxx_method_decl);
-            }
+            return GetMemberFunctionFromCXXMethodDecl(cxx_method_decl);
           }
         }
       }
@@ -4511,14 +4548,7 @@ TypeSystemClang::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
             std::advance(method_iter, idx);
             clang::ObjCMethodDecl *objc_method_decl =
                 method_iter->getCanonicalDecl();
-            if (objc_method_decl) {
-              clang_decl = GetCompilerDecl(objc_method_decl);
-              name = objc_method_decl->getSelector().getAsString();
-              if (objc_method_decl->isClassMethod())
-                kind = lldb::eMemberFunctionKindStaticMethod;
-              else
-                kind = lldb::eMemberFunctionKindInstanceMethod;
-            }
+            return GetMemberFunctionFromObjCMethodDecl(objc_method_decl);
           }
         }
       }
@@ -4541,14 +4571,7 @@ TypeSystemClang::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
               std::advance(method_iter, idx);
               clang::ObjCMethodDecl *objc_method_decl =
                   method_iter->getCanonicalDecl();
-              if (objc_method_decl) {
-                clang_decl = GetCompilerDecl(objc_method_decl);
-                name = objc_method_decl->getSelector().getAsString();
-                if (objc_method_decl->isClassMethod())
-                  kind = lldb::eMemberFunctionKindStaticMethod;
-                else
-                  kind = lldb::eMemberFunctionKindInstanceMethod;
-              }
+              return GetMemberFunctionFromObjCMethodDecl(objc_method_decl);
             }
           }
         }
@@ -4560,10 +4583,7 @@ TypeSystemClang::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
     }
   }
 
-  if (kind == eMemberFunctionKindUnknown)
-    return TypeMemberFunctionImpl();
-  else
-    return TypeMemberFunctionImpl(clang_type, clang_decl, name, kind);
+  return TypeMemberFunctionImpl();
 }
 
 CompilerType
