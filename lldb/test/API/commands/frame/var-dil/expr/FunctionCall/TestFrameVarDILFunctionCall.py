@@ -25,12 +25,19 @@ class TestFrameVarDILFunctionCall(TestBase):
         self.expect_var_path("ns::func1()", value="101")
         self.expect_var_path("array()", value="11")
         self.expect_var_path("ns::func3()", value="103")
-        self.expect_var_path("ns::Base::func2()", value="200")
-        self.expect_var_path("Base::func2()", value="201")
         self.expect(
             "frame var -- 'func3()'",
             error=True,
             substrs=["call to 'func3' is ambiguous"],
+        )
+
+        # Static method calls
+        self.expect_var_path("ns::Base::func2()", value="200")
+        self.expect_var_path("Base::func2()", value="201")
+        self.expect(
+            "frame var -- 'func2()'",
+            error=True,
+            substrs=["no matching function for call to 'func2'"],
         )
 
         # Method calls
