@@ -48,8 +48,16 @@ class TestFrameVarDILFunctionCall(TestBase):
         self.expect_var_path("base.method()", value="399")
         self.expect_var_path("p_nsbase->func2()", value="200")
         self.expect_var_path("base.func2()", value="201")
+        self.expect_var_path("uni.method()", value="1")
         self.expect(
             "frame var -- 'base.Base()'",
             error=True,
-            substrs=["no member named 'Base' in 'Base"],
+            substrs=["no member function named 'Base' in 'Base'"],
+        )
+        self.expect(
+            "frame var -- 'arr_ptr->method()'",
+            error=True,
+            substrs=[
+                "member reference base type 'const int' is not a structure or union"
+            ],
         )

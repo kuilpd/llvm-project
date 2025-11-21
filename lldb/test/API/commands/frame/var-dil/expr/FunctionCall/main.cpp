@@ -34,8 +34,15 @@ struct Base {
   int ambiguous(double d) { return 20; }
 };
 const int Base::array[] = {10};
+const int *arr_ptr = Base::array;
 // Function with the same name as an existing variable:
 int array() { return Base::array[0] + 1; }
+
+union Union {
+  int i = 1;
+  char c[4];
+  int method() { return i; }
+};
 
 int func0() { return 0; }
 int func0(int i) { return i + 1; }
@@ -50,10 +57,12 @@ int main(int argc, char **argv) {
   ns::Base *p_nsbase = new ns::Derived(20);
   auto *p_nsderived = static_cast<ns::Derived *>(p_nsbase);
   Base base = Base();
+  Union uni = Union();
   int r0 = Base::func2();
   int r1 = ns::Base::func2();
   int r2 = base.method();
   int r3 = nsbase.method();
+  int r4 = uni.method();
 
   stop(); // Set a breakpoint here
   return 0;

@@ -128,6 +128,10 @@ private:
                        CompilerType target_type, CastPromoKind &promo_kind,
                        CStyleCastKind &cast_kind, int location);
 
+  llvm::Expected<lldb::ValueObjectSP>
+  CallFunctionViaABI(Address &call_addr, CompilerType &return_type,
+                     llvm::ArrayRef<lldb::addr_t> arr_args, uint32_t location);
+
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;
   llvm::StringRef m_expr;

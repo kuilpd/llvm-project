@@ -1873,15 +1873,54 @@ Interpreter::Visit(const ConditionalNode *node) {
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-Interpreter::Visit(const FunctionCallNode *node) {
-  auto target = m_exe_ctx_scope->CalculateTarget();
+Interpreter::CallFunctionViaABI(Address &call_addr, CompilerType &return_type,
+                                llvm::ArrayRef<lldb::addr_t> arr_args,
+                                uint32_t location) {
   auto process = m_exe_ctx_scope->CalculateProcess();
   auto thread = m_exe_ctx_scope->CalculateThread();
+  if (!process || !thread)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "missing context for an ABI call", location);
   ExecutionContext exe_ctx;
   m_exe_ctx_scope->CalculateExecutionContext(exe_ctx);
-  if (!target || !process || !thread)
+
+  // Create, validate, and run ThreadPlanCallFunction
+  lldb::ABISP abi_sp = process->GetABI();
+  lldb_private::EvaluateExpressionOptions options;
+  lldb::ThreadPlanSP call_plan_sp(new ThreadPlanCallFunction(
+      *thread, call_addr, return_type, arr_args, options));
+  StreamString error;
+  if (!call_plan_sp || !call_plan_sp->ValidatePlan(&error)) {
+    std::string message = llvm::formatv("function call validation failed: {0}",
+                                        error.GetString());
+    return llvm::make_error<DILDiagnosticError>(m_expr, message, location);
+  }
+  lldb_private::DiagnosticManager diagnostics;
+  lldb::ExpressionResults expr_result =
+      process->RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
+  if (expr_result != lldb::eExpressionCompleted) {
+    std::string errMsg =
+        llvm::formatv("function call failed: {0}", toString(expr_result));
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  }
+
+  lldb::ValueObjectSP ret_val = call_plan_sp->GetReturnValueObject();
+  if (ret_val) {
+    ret_val->SetName(ConstString("result"));
+    return ret_val;
+  }
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr, "unable to retrieve function return value", location);
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const FunctionCallNode *node) {
+  auto target = m_exe_ctx_scope->CalculateTarget();
+  if (!target)
     return llvm::make_error<DILDiagnosticError>(
-        m_expr, "missing context for a function lookup", node->GetLocation());
+        m_expr, "missing target for a function lookup", node->GetLocation());
+  ExecutionContext exe_ctx;
+  m_exe_ctx_scope->CalculateExecutionContext(exe_ctx);
 
   SymbolContextList sc_list;
   ModuleFunctionSearchOptions function_options;
@@ -1945,35 +1984,7 @@ Interpreter::Visit(const FunctionCallNode *node) {
   CompilerType rettype = sc.function->GetCompilerType().GetFunctionReturnType();
   llvm::ArrayRef<lldb::addr_t> arr_args;
 
-  // Create, validate, and run ThreadPlanCallFunction
-  lldb::ABISP abi_sp = process->GetABI();
-  lldb_private::EvaluateExpressionOptions options;
-  lldb::ThreadPlanSP call_plan_sp(new ThreadPlanCallFunction(
-      *thread, call_addr, rettype, arr_args, options));
-  StreamString error;
-  if (!call_plan_sp || !call_plan_sp->ValidatePlan(&error)) {
-    std::string message = llvm::formatv("function call validation failed: {0}",
-                                        error.GetString());
-    return llvm::make_error<DILDiagnosticError>(m_expr, message,
-                                                node->GetLocation());
-  }
-  lldb_private::DiagnosticManager diagnostics;
-  lldb::ExpressionResults expr_result =
-      process->RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
-  if (expr_result != lldb::eExpressionCompleted) {
-    std::string errMsg =
-        llvm::formatv("function call failed: {0}", toString(expr_result));
-    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
-                                                node->GetLocation());
-  }
-
-  lldb::ValueObjectSP ret_val = call_plan_sp->GetReturnValueObject();
-  if (ret_val) {
-    ret_val->SetName(ConstString("result"));
-    return ret_val;
-  }
-  return llvm::make_error<DILDiagnosticError>(
-      m_expr, "unable to retrieve function return value", node->GetLocation());
+  return CallFunctionViaABI(call_addr, rettype, arr_args, node->GetLocation());
 }
 
 llvm::Expected<lldb::ValueObjectSP>
@@ -1996,6 +2007,16 @@ Interpreter::Visit(const MethodCallNode *node) {
                               : object->GetCompilerType();
 
   // TODO: check if the object is a structure or union
+  auto type_class = obj_type.GetTypeClass();
+  if (type_class != lldb::eTypeClassClass &&
+      type_class != lldb::eTypeClassStruct &&
+      type_class != lldb::eTypeClassUnion) {
+    std::string errMsg = llvm::formatv(
+        "member reference base type '{0}' is not a structure or union",
+        obj_type.GetTypeName());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                node->GetLocation());
+  }
 
   // Form a fully qualified name
   std::string func_name = node->GetMethodName().str();
@@ -2027,8 +2048,8 @@ Interpreter::Visit(const MethodCallNode *node) {
   }
 
   if (full_matches.IsEmpty()) {
-    std::string errMsg =
-        llvm::formatv("no member named '{0}' in '{1}'", func_name, base_type);
+    std::string errMsg = llvm::formatv(
+        "no member function named '{0}' in '{1}'", func_name, base_type);
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                 node->GetLocation());
   }
@@ -2051,35 +2072,7 @@ Interpreter::Visit(const MethodCallNode *node) {
   args.push_back(obj);
   auto arr_args = llvm::ArrayRef<lldb::addr_t>(args);
 
-  // Create, validate, and run ThreadPlanCallFunction
-  lldb::ABISP abi_sp = process->GetABI();
-  lldb_private::EvaluateExpressionOptions options;
-  lldb::ThreadPlanSP call_plan_sp(new ThreadPlanCallFunction(
-      *thread, call_addr, rettype, arr_args, options));
-  StreamString error;
-  if (!call_plan_sp || !call_plan_sp->ValidatePlan(&error)) {
-    std::string message = llvm::formatv("function call validation failed: {0}",
-                                        error.GetString());
-    return llvm::make_error<DILDiagnosticError>(m_expr, message,
-                                                node->GetLocation());
-  }
-  lldb_private::DiagnosticManager diagnostics;
-  lldb::ExpressionResults expr_result =
-      process->RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
-  if (expr_result != lldb::eExpressionCompleted) {
-    std::string errMsg =
-        llvm::formatv("function call failed: {0}", toString(expr_result));
-    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
-                                                node->GetLocation());
-  }
-
-  lldb::ValueObjectSP ret_val = call_plan_sp->GetReturnValueObject();
-  if (ret_val) {
-    ret_val->SetName(ConstString("result"));
-    return ret_val;
-  }
-  return llvm::make_error<DILDiagnosticError>(
-      m_expr, "unable to retrieve function return value", node->GetLocation());
+  return CallFunctionViaABI(call_addr, rettype, arr_args, node->GetLocation());
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const SizeOfNode *node) {
