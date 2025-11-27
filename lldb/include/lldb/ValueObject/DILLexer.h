@@ -30,6 +30,7 @@ public:
     caret,
     coloncolon,
     colon,
+    comma,
     eof,
     equalequal,
     exclaim,

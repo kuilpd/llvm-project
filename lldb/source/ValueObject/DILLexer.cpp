@@ -32,6 +32,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "coloncolon";
   case Kind::colon:
     return "colon";
+  case Kind::comma:
+    return "comma";
   case Kind::eof:
     return "eof";
   case Kind::equalequal:
@@ -202,6 +204,7 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
       {Token::amp, "&"},
       {Token::caret, "^"},
       {Token::colon, ":"},
+      {Token::comma, ","},
       {Token::exclaim, "!"},
       {Token::greater, ">"},
       {Token::l_paren, "("},

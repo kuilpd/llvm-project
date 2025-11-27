@@ -46,8 +46,11 @@ union Union {
 
 int func0() { return 0; }
 int func0(int i) { return i + 1; }
+int func0(int a, int b, int c, int d) { return a + b + c + d; }
 int ambiguous(float f) { return 1; }
 int ambiguous(double d) { return 2; }
+
+int debase(ns::Base *nsbase, int i) { return nsbase->member + i; }
 
 void stop() {}
 

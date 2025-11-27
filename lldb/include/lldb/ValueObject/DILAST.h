@@ -409,12 +409,15 @@ private:
 
 class FunctionCallNode : public ASTNode {
 public:
-  FunctionCallNode(uint32_t location, llvm::StringRef name)
-      : ASTNode(location, NodeKind::eFunctionCallNode), m_name(name) {}
+  FunctionCallNode(uint32_t location, llvm::StringRef name,
+                   llvm::SmallVector<ASTNodeUP> arguments)
+      : ASTNode(location, NodeKind::eFunctionCallNode), m_name(name),
+        m_arguments(std::move(arguments)) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
   llvm::StringRef GetFunctionName() const { return m_name; }
+  llvm::ArrayRef<ASTNodeUP> GetArguments() const { return m_arguments; }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eFunctionCallNode;
@@ -422,6 +425,7 @@ public:
 
 private:
   ConstString m_name;
+  llvm::SmallVector<ASTNodeUP> m_arguments;
 };
 
 class MethodCallNode : public ASTNode {

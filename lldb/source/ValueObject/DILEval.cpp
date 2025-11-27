@@ -1937,26 +1937,47 @@ Interpreter::Visit(const FunctionCallNode *node) {
                                                 node->GetLocation());
   }
 
+  // Evaluate all arguments
+  llvm::SmallVector<lldb::ValueObjectSP, 6> arguments;
+  for (auto &arg_node : node->GetArguments()) {
+    auto arg_or_err = EvaluateAndDereference(arg_node.get());
+    if (!arg_or_err)
+      return arg_or_err;
+    arguments.emplace_back(*arg_or_err);
+  }
+
   SymbolContextList full_matches;
   SymbolContextList partial_matches;
   SymbolContextList method_matches;
   for (auto sc : sc_list) {
-    // Filter by argument count and name
-    if (sc.function->GetCompilerType().GetFunctionArgumentCount() == 0) {
-      auto name = sc.function->GetNameNoArguments().GetStringRef();
-      auto member_func = sc.function->GetDeclContext().GetAsMemberFunction();
-      // Sort into full function matches, partial function matches,
-      // and full static method matches
-      if (member_func &&
-          member_func.GetKind() == lldb::eMemberFunctionKindStaticMethod) {
-        if (name == func_name)
-          method_matches.Append(sc);
-      } else {
-        if (name == func_name)
-          full_matches.Append(sc);
-        else if (name.ends_with(func_name))
-          partial_matches.Append(sc);
+    // Filter by argument count
+    CompilerType func_type = sc.function->GetCompilerType();
+    if (func_type.GetFunctionArgumentCount() != (int)arguments.size())
+      continue;
+    // Check if argument types match
+    bool types_match = true;
+    for (size_t i = 0; i < arguments.size(); i++) {
+      if (arguments[i]->GetCompilerType().GetCanonicalType() !=
+          func_type.GetFunctionArgumentTypeAtIndex(i).GetCanonicalType()) {
+        types_match = false;
+        break;
       }
+    }
+    if (!types_match)
+      continue;
+    // Sort into full function matches, partial function matches,
+    // and full static method matches
+    auto name = sc.function->GetNameNoArguments().GetStringRef();
+    auto member_func = sc.function->GetDeclContext().GetAsMemberFunction();
+    if (member_func &&
+        member_func.GetKind() == lldb::eMemberFunctionKindStaticMethod) {
+      if (name == func_name)
+        method_matches.Append(sc);
+    } else {
+      if (name == func_name)
+        full_matches.Append(sc);
+      else if (name.ends_with(func_name))
+        partial_matches.Append(sc);
     }
   }
 
@@ -1982,7 +2003,26 @@ Interpreter::Visit(const FunctionCallNode *node) {
 
   Address call_addr = sc.function->GetAddress();
   CompilerType rettype = sc.function->GetCompilerType().GetFunctionReturnType();
-  llvm::ArrayRef<lldb::addr_t> arr_args;
+  llvm::SmallVector<lldb::addr_t, 6> arr_args;
+  for (size_t i = 0; i < arguments.size(); i++) {
+    DataExtractor data;
+    Status error;
+    arguments[i]->GetData(data, error);
+    if (error.Fail())
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "couldn't retrieve argument value",
+          node->GetArguments()[i]->GetLocation());
+    auto size = arguments[i]->GetByteSize();
+    if (!size)
+      return size.takeError();
+    if (*size > 8)
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "argument byte size is too large",
+          node->GetArguments()[i]->GetLocation());
+    lldb::offset_t offset_ptr = 0;
+    auto value = data.GetMaxU64(&offset_ptr, *size);
+    arr_args.emplace_back(value);
+  }
 
   return CallFunctionViaABI(call_addr, rettype, arr_args, node->GetLocation());
 }

@@ -551,8 +551,8 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
 //    boolean_literal
 //    id_expression
 //    "(" expression ")"
-//    id_expression "(" ")"
-//    "sizeof" "(" expression ")
+//    id_expression "(" function_argument_list ")"
+//    "sizeof" "(" expression ")"
 //    "sizeof" "(" type_id ")" ;
 //
 ASTNodeUP DILParser::ParsePrimaryExpression() {
@@ -585,9 +585,11 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
           m_dil_lexer.Advance();
           return std::make_unique<SizeOfNode>(loc, std::move(expr));
         }
+        llvm::SmallVector<ASTNodeUP> arguments = ParseFunctionArgumentList();
         Expect(Token::r_paren);
         m_dil_lexer.Advance();
-        return std::make_unique<FunctionCallNode>(loc, identifier);
+        return std::make_unique<FunctionCallNode>(loc, identifier,
+                                                  std::move(arguments));
       }
       return std::make_unique<IdentifierNode>(loc, identifier);
     }
@@ -604,6 +606,34 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
   BailOut(llvm::formatv("Unexpected token: {0}", CurToken()),
           CurToken().GetLocation(), CurToken().GetSpelling().length());
   return std::make_unique<ErrorNode>();
+}
+
+// Parse function_argument_list
+//
+//  function_argument:
+//    expression
+//
+//  function_argument_list:
+//    ""
+//    function_argument
+//    function_argument_list "," function_argument
+llvm::SmallVector<ASTNodeUP> DILParser::ParseFunctionArgumentList() {
+  llvm::SmallVector<ASTNodeUP> arguments;
+  while (!CurToken().IsOneOf({Token::r_paren, Token::eof})) {
+    ASTNodeUP arg = ParseExpression();
+    arguments.emplace_back(std::move(arg));
+
+    if (CurToken().Is(Token::comma)) {
+      m_dil_lexer.Advance();
+      if (CurToken().Is(Token::r_paren)) {
+        BailOut("expected argument expression", CurToken().GetLocation(),
+                CurToken().GetSpelling().length());
+        arguments.emplace_back(std::make_unique<ErrorNode>());
+        return arguments;
+      }
+    }
+  }
+  return arguments;
 }
 
 // Parse nested_name_specifier.

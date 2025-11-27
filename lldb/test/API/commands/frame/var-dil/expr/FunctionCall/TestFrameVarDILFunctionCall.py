@@ -31,6 +31,12 @@ class TestFrameVarDILFunctionCall(TestBase):
             substrs=["call to 'func3' is ambiguous"],
         )
 
+        # Function calls with arguments
+        self.expect_var_path("func0(1)", value="2")
+        # self.expect_var_path("func0(1.0f)", value="111")
+        self.expect_var_path("func0(1, 10, 100, 1000)", value="1111")
+        self.expect_var_path("debase(&nsbase, 100)", value="110")
+
         # Static method calls
         self.expect_var_path("ns::Base::func2()", value="200")
         self.expect_var_path("Base::func2()", value="201")

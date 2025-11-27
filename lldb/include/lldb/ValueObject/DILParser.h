@@ -164,6 +164,7 @@ private:
   ASTNodeUP ParseUnaryExpression();
   ASTNodeUP ParsePostfixExpression();
   ASTNodeUP ParsePrimaryExpression();
+  llvm::SmallVector<ASTNodeUP> ParseFunctionArgumentList();
 
   std::string ParseNestedNameSpecifier();
 

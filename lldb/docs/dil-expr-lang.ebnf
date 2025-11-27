@@ -55,9 +55,15 @@ primary_expression = numeric_literal
                    | boolean_literal
                    | id_expression
                    | "(" expression ")"
-                   | id_expression "(" ")"
+                   | id_expression "(" function_argument_list ")"
                    | "sizeof" "(" expression ")"
                    | "sizeof" "(" type_id ")" ;
+
+function_argument = expression ;
+
+function_argument_list = ""
+                       | function_argument
+                       | function_argument_list "," function_argument ;
 
 id_expression = unqualified_id
               | qualified_id
