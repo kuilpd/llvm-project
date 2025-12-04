@@ -1989,11 +1989,16 @@ Interpreter::Visit(const FunctionCallNode *node) {
   for (auto sc : sc_list) {
     // Filter by argument count
     CompilerType func_type = sc.function->GetCompilerType();
-    if (func_type.GetFunctionArgumentCount() != (int)arguments.size())
+    int prototype_argc = func_type.GetFunctionArgumentCount();
+    if (func_type.IsVariadicFunctionType() &&
+        prototype_argc > (int)arguments.size())
+      continue;
+    if (!func_type.IsVariadicFunctionType() &&
+        prototype_argc != (int)arguments.size())
       continue;
     // Check if argument types match
     bool types_match = true;
-    for (size_t i = 0; i < arguments.size(); i++) {
+    for (auto i = 0; i < prototype_argc; i++) {
       if (arguments[i]->GetCompilerType().GetCanonicalType() !=
           func_type.GetFunctionArgumentTypeAtIndex(i).GetCanonicalType()) {
         types_match = false;

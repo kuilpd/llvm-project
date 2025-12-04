@@ -174,6 +174,8 @@ public:
   GetFunctionArgumentAtIndex(lldb::opaque_compiler_type_t type,
                              const size_t index) = 0;
 
+  virtual bool IsVariadicFunctionType(lldb::opaque_compiler_type_t type) = 0;
+
   virtual bool IsFunctionPointerType(lldb::opaque_compiler_type_t type) = 0;
 
   virtual bool

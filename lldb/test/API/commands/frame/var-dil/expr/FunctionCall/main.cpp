@@ -53,7 +53,7 @@ double func0(float f, int i, double d) { return f + i + d; }
 int func0(int a, int b, int c, int d) { return a + b + c + d; }
 int ambiguous(float f) { return 1; }
 int ambiguous(double d) { return 2; }
-double sum(int N, ...) {
+double dsum(int N, ...) {
   va_list args;
   va_start(args, N);
   double sum = 0;
@@ -82,6 +82,6 @@ int main(int argc, char **argv) {
 
   stop(); // Set a breakpoint here
   double r5 = func0(1.0f, 2, 4.0);
-  double r6 = sum(3, 128.125, 2.0, 4.0);
+  double r6 = dsum(3, 128.125, 2.0, 4.0);
   return 0;
 }

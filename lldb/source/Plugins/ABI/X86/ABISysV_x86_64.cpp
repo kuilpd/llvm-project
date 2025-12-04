@@ -15,6 +15,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -253,6 +254,14 @@ bool ABISysV_x86_64::PrepareTrivialCall(
     LLDB_LOGF(log, "About to write arg%" PRIu64 " (0x%" PRIx64 ") into %s",
               static_cast<uint64_t>(i + 1), value, reg_info->name);
     if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, value))
+      return false;
+  }
+
+  // %al is used to indicate the number of vector arguments
+  // passed to a function requiring a variable number of arguments
+  if (function.GetCompilerType().IsVariadicFunctionType()) {
+    reg_info = reg_ctx->GetRegisterInfoByName("al", 0);
+    if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, next_xmm))
       return false;
   }
 

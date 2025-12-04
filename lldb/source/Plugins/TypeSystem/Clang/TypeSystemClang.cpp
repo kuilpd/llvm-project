@@ -3224,6 +3224,18 @@ bool TypeSystemClang::IsMemberFunctionPointerType(
   return IsTypeImpl(type, isMemberFunctionPointerType);
 }
 
+bool TypeSystemClang::IsVariadicFunctionType(
+    lldb::opaque_compiler_type_t type) {
+  if (type) {
+    clang::QualType qual_type(GetQualType(type));
+    const clang::FunctionProtoType *func =
+        llvm::dyn_cast<clang::FunctionProtoType>(qual_type.getTypePtr());
+    if (func)
+      return func->isVariadic();
+  }
+  return false;
+}
+
 bool TypeSystemClang::IsFunctionPointerType(lldb::opaque_compiler_type_t type) {
   auto isFunctionPointerType = [](clang::QualType qual_type) {
     return qual_type->isFunctionPointerType();

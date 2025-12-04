@@ -162,6 +162,13 @@ CompilerType::GetFunctionArgumentAtIndex(const size_t index) const {
   return CompilerType();
 }
 
+bool CompilerType::IsVariadicFunctionType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsVariadicFunctionType(m_type);
+  return false;
+}
+
 bool CompilerType::IsFunctionPointerType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())

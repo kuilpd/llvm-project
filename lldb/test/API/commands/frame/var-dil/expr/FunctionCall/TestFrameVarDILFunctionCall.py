@@ -37,6 +37,12 @@ class TestFrameVarDILFunctionCall(TestBase):
         self.expect_var_path("func0(1.0f)", value="101.25")
         self.expect_var_path("func0(1.0f, 2, 3.0)", value="6")
         self.expect_var_path("debase(&nsbase, 100)", value="110")
+        self.expect_var_path("dsum(4, 1.0, 2.0, 3.0, 4.0)", value="10")
+        self.expect(
+            "frame var -- 'dsum(1.0, 2.0)'",
+            error=True,
+            substrs=["no matching function for call to 'dsum'"],
+        )
 
         # Static method calls
         self.expect_var_path("ns::Base::func2()", value="200")

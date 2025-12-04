@@ -669,6 +669,8 @@ public:
   CompilerType GetFunctionArgumentAtIndex(lldb::opaque_compiler_type_t type,
                                           const size_t index) override;
 
+  bool IsVariadicFunctionType(lldb::opaque_compiler_type_t type) override;
+
   bool IsFunctionPointerType(lldb::opaque_compiler_type_t type) override;
 
   bool IsMemberFunctionPointerType(lldb::opaque_compiler_type_t type) override;
