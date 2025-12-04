@@ -131,6 +131,10 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   CallFunctionViaABI(Address &call_addr, CompilerType &return_type,
                      llvm::ArrayRef<lldb::addr_t> arr_args, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  ExecuteThreadPlan(lldb::ThreadPlanSP thread_plan_sp,
+                    lldb_private::EvaluateExpressionOptions options,
+                    uint32_t location);
 
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;

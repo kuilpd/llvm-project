@@ -27,6 +27,10 @@ public:
                          llvm::ArrayRef<lldb::addr_t> args,
                          const EvaluateExpressionOptions &options);
 
+  ThreadPlanCallFunction(Thread &thread, Function &function,
+                         llvm::ArrayRef<lldb::ValueObjectSP> valobj_args,
+                         const EvaluateExpressionOptions &options);
+
   ThreadPlanCallFunction(Thread &thread, const Address &function,
                          const EvaluateExpressionOptions &options);
 

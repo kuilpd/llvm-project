@@ -1914,11 +1914,48 @@ Interpreter::CallFunctionViaABI(Address &call_addr, CompilerType &return_type,
 }
 
 llvm::Expected<lldb::ValueObjectSP>
+Interpreter::ExecuteThreadPlan(lldb::ThreadPlanSP thread_plan_sp,
+                               lldb_private::EvaluateExpressionOptions options,
+                               uint32_t location) {
+  auto process = m_exe_ctx_scope->CalculateProcess();
+  if (!process)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "missing process for an ABI call", location);
+  ExecutionContext exe_ctx;
+  m_exe_ctx_scope->CalculateExecutionContext(exe_ctx);
+
+  lldb::ABISP abi_sp = process->GetABI();
+  StreamString error;
+  if (!thread_plan_sp || !thread_plan_sp->ValidatePlan(&error)) {
+    std::string message = llvm::formatv("function call validation failed: {0}",
+                                        error.GetString());
+    return llvm::make_error<DILDiagnosticError>(m_expr, message, location);
+  }
+  lldb_private::DiagnosticManager diagnostics;
+  lldb::ExpressionResults expr_result =
+      process->RunThreadPlan(exe_ctx, thread_plan_sp, options, diagnostics);
+  if (expr_result != lldb::eExpressionCompleted) {
+    std::string errMsg =
+        llvm::formatv("function call failed: {0}", toString(expr_result));
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  }
+
+  lldb::ValueObjectSP ret_val = thread_plan_sp->GetReturnValueObject();
+  if (ret_val) {
+    ret_val->SetName(ConstString("result"));
+    return ret_val;
+  }
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr, "unable to retrieve function return value", location);
+}
+
+llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const FunctionCallNode *node) {
   auto target = m_exe_ctx_scope->CalculateTarget();
-  if (!target)
+  auto thread = m_exe_ctx_scope->CalculateThread();
+  if (!target || !thread)
     return llvm::make_error<DILDiagnosticError>(
-        m_expr, "missing target for a function lookup", node->GetLocation());
+        m_expr, "missing context for a function call", node->GetLocation());
   ExecutionContext exe_ctx;
   m_exe_ctx_scope->CalculateExecutionContext(exe_ctx);
 
@@ -2002,29 +2039,20 @@ Interpreter::Visit(const FunctionCallNode *node) {
   }
 
   Address call_addr = sc.function->GetAddress();
-  CompilerType rettype = sc.function->GetCompilerType().GetFunctionReturnType();
-  llvm::SmallVector<lldb::addr_t, 6> arr_args;
-  for (size_t i = 0; i < arguments.size(); i++) {
-    DataExtractor data;
-    Status error;
-    arguments[i]->GetData(data, error);
-    if (error.Fail())
-      return llvm::make_error<DILDiagnosticError>(
-          m_expr, "couldn't retrieve argument value",
-          node->GetArguments()[i]->GetLocation());
-    auto size = arguments[i]->GetByteSize();
-    if (!size)
-      return size.takeError();
-    if (*size > 8)
-      return llvm::make_error<DILDiagnosticError>(
-          m_expr, "argument byte size is too large",
-          node->GetArguments()[i]->GetLocation());
-    lldb::offset_t offset_ptr = 0;
-    auto value = data.GetMaxU64(&offset_ptr, *size);
-    arr_args.emplace_back(value);
+  lldb_private::EvaluateExpressionOptions options;
+  lldb::ThreadPlanSP thread_plan_sp;
+  if (arguments.size() == 0) {
+    llvm::SmallVector<lldb::addr_t, 1> arr_args;
+    CompilerType rettype =
+        sc.function->GetCompilerType().GetFunctionReturnType();
+    thread_plan_sp =
+        std::shared_ptr<lldb_private::ThreadPlan>(new ThreadPlanCallFunction(
+            *thread, call_addr, rettype, arr_args, options));
+  } else {
+    thread_plan_sp = std::shared_ptr<lldb_private::ThreadPlan>(
+        new ThreadPlanCallFunction(*thread, *sc.function, arguments, options));
   }
-
-  return CallFunctionViaABI(call_addr, rettype, arr_args, node->GetLocation());
+  return ExecuteThreadPlan(thread_plan_sp, options, node->GetLocation());
 }
 
 llvm::Expected<lldb::ValueObjectSP>

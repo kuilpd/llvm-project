@@ -32,9 +32,10 @@ class TestFrameVarDILFunctionCall(TestBase):
         )
 
         # Function calls with arguments
-        self.expect_var_path("func0(1)", value="2")
-        # self.expect_var_path("func0(1.0f)", value="111")
+        self.expect_var_path("func0(1)", value="101")
         self.expect_var_path("func0(1, 10, 100, 1000)", value="1111")
+        self.expect_var_path("func0(1.0f)", value="101.25")
+        self.expect_var_path("func0(1.0f, 2, 3.0)", value="6")
         self.expect_var_path("debase(&nsbase, 100)", value="110")
 
         # Static method calls

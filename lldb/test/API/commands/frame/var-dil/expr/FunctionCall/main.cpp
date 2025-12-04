@@ -1,3 +1,5 @@
+#include <cstdarg>
+
 namespace ns {
 int func0() { return 1; }
 int func1() { return 101; }
@@ -45,10 +47,21 @@ union Union {
 };
 
 int func0() { return 0; }
-int func0(int i) { return i + 1; }
+int func0(int i) { return i + 100; }
+float func0(float f) { return f + 100.25f; }
+double func0(float f, int i, double d) { return f + i + d; }
 int func0(int a, int b, int c, int d) { return a + b + c + d; }
 int ambiguous(float f) { return 1; }
 int ambiguous(double d) { return 2; }
+double sum(int N, ...) {
+  va_list args;
+  va_start(args, N);
+  double sum = 0;
+  for (auto i = 0; i < N; i++)
+    sum += va_arg(args, double);
+  va_end(args);
+  return sum;
+}
 
 int debase(ns::Base *nsbase, int i) { return nsbase->member + i; }
 
@@ -68,5 +81,7 @@ int main(int argc, char **argv) {
   int r4 = uni.method();
 
   stop(); // Set a breakpoint here
+  double r5 = func0(1.0f, 2, 4.0);
+  double r6 = sum(3, 128.125, 2.0, 4.0);
   return 0;
 }

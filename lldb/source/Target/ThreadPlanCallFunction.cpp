@@ -12,6 +12,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/LanguageRuntime.h"
@@ -120,6 +121,41 @@ ThreadPlanCallFunction::ThreadPlanCallFunction(
 
   if (!abi->PrepareTrivialCall(thread, m_function_sp, function_load_addr,
                                start_load_addr, args))
+    return;
+
+  ReportRegisterState("Function call was set up.  Register state was:");
+
+  m_valid = true;
+}
+
+ThreadPlanCallFunction::ThreadPlanCallFunction(
+    Thread &thread, Function &function,
+    llvm::ArrayRef<ValueObjectSP> valobj_args,
+    const EvaluateExpressionOptions &options)
+    : ThreadPlan(ThreadPlan::eKindCallFunction, "Call function plan", thread,
+                 eVoteNoOpinion, eVoteNoOpinion),
+      m_valid(false), m_stop_other_threads(options.GetStopOthers()),
+      m_unwind_on_error(options.DoesUnwindOnError()),
+      m_ignore_breakpoints(options.DoesIgnoreBreakpoints()),
+      m_debug_execution(options.GetDebug()),
+      m_trap_exceptions(options.GetTrapExceptions()), m_start_addr(),
+      m_function_sp(0), m_subplan_sp(), m_cxx_language_runtime(nullptr),
+      m_objc_language_runtime(nullptr), m_stored_thread_state(),
+      m_real_stop_info_sp(), m_constructor_errors(), m_return_valobj_sp(),
+      m_takedown_done(false), m_should_clear_objc_exception_bp(false),
+      m_should_clear_cxx_exception_bp(false),
+      m_stop_address(LLDB_INVALID_ADDRESS) {
+  m_function_addr = function.GetAddress();
+  m_return_type = function.GetCompilerType().GetFunctionReturnType();
+  lldb::addr_t start_load_addr = LLDB_INVALID_ADDRESS;
+  lldb::addr_t function_load_addr = LLDB_INVALID_ADDRESS;
+  ABI *abi = nullptr;
+
+  if (!ConstructorSetup(thread, abi, start_load_addr, function_load_addr))
+    return;
+
+  if (!abi->PrepareTrivialCall(thread, m_function_sp, function_load_addr,
+                               start_load_addr, function, valobj_args))
     return;
 
   ReportRegisterState("Function call was set up.  Register state was:");

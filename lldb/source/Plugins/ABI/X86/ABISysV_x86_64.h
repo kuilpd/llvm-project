@@ -22,6 +22,12 @@ public:
                           lldb::addr_t returnAddress,
                           llvm::ArrayRef<lldb::addr_t> args) const override;
 
+  bool PrepareTrivialCall(
+      lldb_private::Thread &thread, lldb::addr_t sp,
+      lldb::addr_t functionAddress, lldb::addr_t returnAddress,
+      lldb_private::Function &function,
+      llvm::ArrayRef<lldb::ValueObjectSP> valobj_args) const override;
+
   bool GetArgumentValues(lldb_private::Thread &thread,
                          lldb_private::ValueList &values) const override;
 

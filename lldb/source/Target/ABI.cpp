@@ -200,6 +200,14 @@ lldb::ValueObjectSP ABI::GetReturnValueObjectImpl(Thread &thread,
   return return_valobj_sp;
 }
 
+bool ABI::PrepareTrivialCall(lldb_private::Thread &thread, lldb::addr_t sp,
+                             lldb::addr_t functionAddress,
+                             lldb::addr_t returnAddress, Function &function,
+                             llvm::ArrayRef<ValueObjectSP> valobj_args) const {
+  // Unimplemented by default
+  return false;
+}
+
 bool ABI::PrepareTrivialCall(Thread &thread, lldb::addr_t sp,
                              lldb::addr_t functionAddress,
                              lldb::addr_t returnAddress, llvm::Type &returntype,

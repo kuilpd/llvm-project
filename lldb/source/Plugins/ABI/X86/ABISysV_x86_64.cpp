@@ -189,6 +189,116 @@ bool ABISysV_x86_64::PrepareTrivialCall(Thread &thread, addr_t sp,
   return true;
 }
 
+bool ABISysV_x86_64::PrepareTrivialCall(
+    Thread &thread, addr_t sp, addr_t func_addr, addr_t return_addr,
+    Function &function, llvm::ArrayRef<ValueObjectSP> valobj_args) const {
+  Log *log = GetLog(LLDBLog::Expressions);
+
+  if (log) {
+    StreamString s;
+    s.Printf("ABISysV_x86_64::PrepareTrivialCall (tid = 0x%" PRIx64
+             ", sp = 0x%" PRIx64 ", func_addr = 0x%" PRIx64
+             ", return_addr = 0x%" PRIx64,
+             thread.GetID(), (uint64_t)sp, (uint64_t)func_addr,
+             (uint64_t)return_addr);
+
+    for (size_t i = 0; i < valobj_args.size(); ++i)
+      s.Printf(", arg%" PRIu64 " = (%s) %s" PRIx64,
+               static_cast<uint64_t>(i + 1),
+               valobj_args[i]->GetCompilerType().GetTypeName().GetCString(),
+               valobj_args[i]->GetValueAsCString());
+    s.PutCString(")");
+    log->PutString(s.GetString());
+  }
+
+  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  if (!reg_ctx)
+    return false;
+
+  const RegisterInfo *reg_info = nullptr;
+
+  if (valobj_args.size() > 6) // TODO handle more than 6 arguments
+    return false;
+
+  uint32_t next_rd = 0;
+  uint32_t next_xmm = 0;
+  static char xmmi[6][5] = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5"};
+  for (size_t i = 0; i < valobj_args.size(); ++i) {
+    CompilerType valobj_type = valobj_args[i]->GetCompilerType();
+    bool is_signed;
+    if (valobj_type.IsIntegerOrEnumerationType(is_signed) ||
+        valobj_type.IsPointerType()) {
+      reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
+                                          LLDB_REGNUM_GENERIC_ARG1 + next_rd++);
+    } else if (valobj_args[i]->GetCompilerType().IsFloat()) {
+      reg_info = reg_ctx->GetRegisterInfoByName(xmmi[next_xmm++], 0);
+    } else {
+      return false;
+    }
+
+    // Extract data regardless of the type
+    DataExtractor data;
+    Status error;
+    valobj_args[i]->GetData(data, error);
+    if (error.Fail())
+      return false;
+    auto size = valobj_args[i]->GetByteSize();
+    if (!size)
+      return false;
+    if (*size > 8)
+      return false;
+    lldb::offset_t offset_ptr = 0;
+    uint64_t value = data.GetMaxU64(&offset_ptr, *size);
+
+    LLDB_LOGF(log, "About to write arg%" PRIu64 " (0x%" PRIx64 ") into %s",
+              static_cast<uint64_t>(i + 1), value, reg_info->name);
+    if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, value))
+      return false;
+  }
+
+  // First, align the SP
+
+  LLDB_LOGF(log, "16-byte aligning SP: 0x%" PRIx64 " to 0x%" PRIx64,
+            (uint64_t)sp, (uint64_t)(sp & ~0xfull));
+
+  sp &= ~(0xfull); // 16-byte alignment
+
+  sp -= 8;
+
+  Status error;
+  const RegisterInfo *pc_reg_info =
+      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+  const RegisterInfo *sp_reg_info =
+      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
+  ProcessSP process_sp(thread.GetProcess());
+
+  RegisterValue reg_value;
+  LLDB_LOGF(log,
+            "Pushing the return address onto the stack: 0x%" PRIx64
+            ": 0x%" PRIx64,
+            (uint64_t)sp, (uint64_t)return_addr);
+
+  // Save return address onto the stack
+  if (!process_sp->WritePointerToMemory(sp, return_addr, error))
+    return false;
+
+  // %rsp is set to the actual stack value.
+
+  LLDB_LOGF(log, "Writing SP: 0x%" PRIx64, (uint64_t)sp);
+
+  if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_info, sp))
+    return false;
+
+  // %rip is set to the address of the called function.
+
+  LLDB_LOGF(log, "Writing IP: 0x%" PRIx64, (uint64_t)func_addr);
+
+  if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_info, func_addr))
+    return false;
+
+  return true;
+}
+
 static bool ReadIntegerArgument(Scalar &scalar, unsigned int bit_width,
                                 bool is_signed, Thread &thread,
                                 uint32_t *argument_register_ids,

@@ -48,6 +48,12 @@ public:
                                   lldb::addr_t returnAddress,
                                   llvm::ArrayRef<lldb::addr_t> args) const = 0;
 
+  virtual bool
+  PrepareTrivialCall(lldb_private::Thread &thread, lldb::addr_t sp,
+                     lldb::addr_t functionAddress, lldb::addr_t returnAddress,
+                     Function &function,
+                     llvm::ArrayRef<lldb::ValueObjectSP> args) const;
+
   // Prepare trivial call used from ThreadPlanFunctionCallUsingABI
   // AD:
   //  . Because i don't want to change other ABI's this is not declared pure
