@@ -138,6 +138,7 @@ protected:
                            // nice to know the real stop reason. This gets set
                            // in DoTakedown.
   StreamString m_constructor_errors;
+  Status m_prepare_error;
   lldb::ValueObjectSP m_return_valobj_sp; // If this contains a valid pointer,
                                           // use the ABI to extract values when
                                           // complete

@@ -190,11 +190,10 @@ bool ABISysV_x86_64::PrepareTrivialCall(Thread &thread, addr_t sp,
   return true;
 }
 
-bool ABISysV_x86_64::PrepareTrivialCall(
+Status ABISysV_x86_64::PrepareTrivialCall(
     Thread &thread, addr_t sp, addr_t func_addr, addr_t return_addr,
     Function &function, llvm::ArrayRef<ValueObjectSP> valobj_args) const {
   Log *log = GetLog(LLDBLog::Expressions);
-
   if (log) {
     StreamString s;
     s.Printf("ABISysV_x86_64::PrepareTrivialCall (tid = 0x%" PRIx64
@@ -214,17 +213,17 @@ bool ABISysV_x86_64::PrepareTrivialCall(
 
   RegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
-    return false;
+    return Status::FromErrorString("could not retrieve register context");
 
   const RegisterInfo *reg_info = nullptr;
 
   if (valobj_args.size() > 6) // TODO handle more than 6 arguments
-    return false;
+    return Status::FromErrorString("agrument count > 6 is not supported");
 
   uint32_t next_rd = 0;
   uint32_t next_xmm = 0;
   static char xmmi[6][5] = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5"};
-  for (size_t i = 0; i < valobj_args.size(); ++i) {
+  for (auto i = 0; i < (int)valobj_args.size(); ++i) {
     CompilerType valobj_type = valobj_args[i]->GetCompilerType();
     bool is_signed;
     if (valobj_type.IsIntegerOrEnumerationType(is_signed) ||
@@ -234,7 +233,9 @@ bool ABISysV_x86_64::PrepareTrivialCall(
     } else if (valobj_args[i]->GetCompilerType().IsFloat()) {
       reg_info = reg_ctx->GetRegisterInfoByName(xmmi[next_xmm++], 0);
     } else {
-      return false;
+      return Status::FromErrorStringWithFormat(
+          "unsupported type of arg%" PRIi32 ": %s", i + 1,
+          valobj_type.TypeDescription().c_str());
     }
 
     // Extract data regardless of the type
@@ -242,19 +243,22 @@ bool ABISysV_x86_64::PrepareTrivialCall(
     Status error;
     valobj_args[i]->GetData(data, error);
     if (error.Fail())
-      return false;
+      return error;
     auto size = valobj_args[i]->GetByteSize();
     if (!size)
-      return false;
+      return Status::FromError(size.takeError());
     if (*size > 8)
-      return false;
+      return Status::FromErrorStringWithFormat(
+          "unsupported size of arg%" PRIi32 ": %" PRIu64, i + 1, *size);
     lldb::offset_t offset_ptr = 0;
     uint64_t value = data.GetMaxU64(&offset_ptr, *size);
 
     LLDB_LOGF(log, "About to write arg%" PRIu64 " (0x%" PRIx64 ") into %s",
               static_cast<uint64_t>(i + 1), value, reg_info->name);
     if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, value))
-      return false;
+      return Status::FromErrorStringWithFormat("could not write arg%" PRIi32
+                                               " (0x%" PRIx64 ") into %s",
+                                               i + 1, value, reg_info->name);
   }
 
   // %al is used to indicate the number of vector arguments
@@ -262,7 +266,8 @@ bool ABISysV_x86_64::PrepareTrivialCall(
   if (function.GetCompilerType().IsVariadicFunctionType()) {
     reg_info = reg_ctx->GetRegisterInfoByName("al", 0);
     if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, next_xmm))
-      return false;
+      return Status::FromErrorStringWithFormat(
+          "could not write 0x%" PRIx32 " into %s", next_xmm, reg_info->name);
   }
 
   // First, align the SP
@@ -274,7 +279,6 @@ bool ABISysV_x86_64::PrepareTrivialCall(
 
   sp -= 8;
 
-  Status error;
   const RegisterInfo *pc_reg_info =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
   const RegisterInfo *sp_reg_info =
@@ -288,24 +292,29 @@ bool ABISysV_x86_64::PrepareTrivialCall(
             (uint64_t)sp, (uint64_t)return_addr);
 
   // Save return address onto the stack
+  Status error;
   if (!process_sp->WritePointerToMemory(sp, return_addr, error))
-    return false;
+    return error;
 
   // %rsp is set to the actual stack value.
 
   LLDB_LOGF(log, "Writing SP: 0x%" PRIx64, (uint64_t)sp);
 
   if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_info, sp))
-    return false;
+    return Status::FromErrorStringWithFormat("could not write 0x%" PRIx64
+                                             " into %s",
+                                             (uint64_t)sp, sp_reg_info->name);
 
   // %rip is set to the address of the called function.
 
   LLDB_LOGF(log, "Writing IP: 0x%" PRIx64, (uint64_t)func_addr);
 
   if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_info, func_addr))
-    return false;
+    return Status::FromErrorStringWithFormat(
+        "could not write 0x%" PRIx64 " into %s", (uint64_t)func_addr,
+        pc_reg_info->name);
 
-  return true;
+  return error;
 }
 
 static bool ReadIntegerArgument(Scalar &scalar, unsigned int bit_width,

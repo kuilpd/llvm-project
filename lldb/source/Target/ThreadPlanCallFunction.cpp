@@ -141,8 +141,9 @@ ThreadPlanCallFunction::ThreadPlanCallFunction(
       m_trap_exceptions(options.GetTrapExceptions()), m_start_addr(),
       m_function_sp(0), m_subplan_sp(), m_cxx_language_runtime(nullptr),
       m_objc_language_runtime(nullptr), m_stored_thread_state(),
-      m_real_stop_info_sp(), m_constructor_errors(), m_return_valobj_sp(),
-      m_takedown_done(false), m_should_clear_objc_exception_bp(false),
+      m_real_stop_info_sp(), m_constructor_errors(), m_prepare_error(),
+      m_return_valobj_sp(), m_takedown_done(false),
+      m_should_clear_objc_exception_bp(false),
       m_should_clear_cxx_exception_bp(false),
       m_stop_address(LLDB_INVALID_ADDRESS) {
   m_function_addr = function.GetAddress();
@@ -154,8 +155,10 @@ ThreadPlanCallFunction::ThreadPlanCallFunction(
   if (!ConstructorSetup(thread, abi, start_load_addr, function_load_addr))
     return;
 
-  if (!abi->PrepareTrivialCall(thread, m_function_sp, function_load_addr,
-                               start_load_addr, function, valobj_args))
+  m_prepare_error =
+      abi->PrepareTrivialCall(thread, m_function_sp, function_load_addr,
+                              start_load_addr, function, valobj_args);
+  if (m_prepare_error.Fail())
     return;
 
   ReportRegisterState("Function call was set up.  Register state was:");
@@ -176,7 +179,7 @@ ThreadPlanCallFunction::ThreadPlanCallFunction(
       m_start_addr(), m_function_sp(0), m_subplan_sp(),
       m_cxx_language_runtime(nullptr), m_objc_language_runtime(nullptr),
       m_stored_thread_state(), m_real_stop_info_sp(), m_constructor_errors(),
-      m_return_valobj_sp(), m_takedown_done(false),
+      m_prepare_error(), m_return_valobj_sp(), m_takedown_done(false),
       m_should_clear_objc_exception_bp(false),
       m_should_clear_cxx_exception_bp(false),
       m_stop_address(LLDB_INVALID_ADDRESS), m_return_type(CompilerType()) {}
@@ -279,6 +282,8 @@ bool ThreadPlanCallFunction::ValidatePlan(Stream *error) {
     if (error) {
       if (m_constructor_errors.GetSize() > 0)
         error->PutCString(m_constructor_errors.GetString());
+      else if (m_prepare_error.Fail())
+        error->PutCString(m_prepare_error.AsCString());
       else
         error->PutCString("Unknown error");
     }

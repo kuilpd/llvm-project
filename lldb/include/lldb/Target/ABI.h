@@ -48,7 +48,7 @@ public:
                                   lldb::addr_t returnAddress,
                                   llvm::ArrayRef<lldb::addr_t> args) const = 0;
 
-  virtual bool
+  virtual Status
   PrepareTrivialCall(lldb_private::Thread &thread, lldb::addr_t sp,
                      lldb::addr_t functionAddress, lldb::addr_t returnAddress,
                      Function &function,

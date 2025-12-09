@@ -22,7 +22,7 @@ public:
                           lldb::addr_t returnAddress,
                           llvm::ArrayRef<lldb::addr_t> args) const override;
 
-  bool PrepareTrivialCall(
+  lldb_private::Status PrepareTrivialCall(
       lldb_private::Thread &thread, lldb::addr_t sp,
       lldb::addr_t functionAddress, lldb::addr_t returnAddress,
       lldb_private::Function &function,

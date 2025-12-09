@@ -43,6 +43,11 @@ class TestFrameVarDILFunctionCall(TestBase):
             error=True,
             substrs=["no matching function for call to 'dsum'"],
         )
+        self.expect(
+            "frame var -- 'dsum(1, nsbase)'",
+            error=True,
+            substrs=["function call validation failed: unsupported type of arg2"],
+        )
 
         # Static method calls
         self.expect_var_path("ns::Base::func2()", value="200")
