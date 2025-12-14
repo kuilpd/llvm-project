@@ -34,6 +34,7 @@ class TestFrameVarDILFunctionCall(TestBase):
         # Function calls with arguments
         self.expect_var_path("func0(1)", value="101")
         self.expect_var_path("func0(1, 10, 100, 1000)", value="1111")
+        self.expect_var_path("func0(1, 5 + 5, func0(0), (10*10*10))", value="1111")
         self.expect_var_path("func0(1.0f)", value="101.25")
         self.expect_var_path("func0(1.0f, 2, 3.0)", value="6")
         self.expect_var_path("debase(&nsbase, 100)", value="110")
@@ -47,6 +48,16 @@ class TestFrameVarDILFunctionCall(TestBase):
             "frame var -- 'dsum(1, nsbase)'",
             error=True,
             substrs=["function call validation failed: unsupported type of arg2"],
+        )
+        self.expect(
+            "frame var -- 'dsum(2, 3, )'",
+            error=True,
+            substrs=["expected argument expression"],
+        )
+        self.expect(
+            "frame var -- 'dsum(2, 3, 4'",
+            error=True,
+            substrs=["expected 'r_paren', got: <'' (eof)>"],
         )
 
         # Static method calls
@@ -67,6 +78,7 @@ class TestFrameVarDILFunctionCall(TestBase):
         self.expect_var_path("p_nsbase->func2()", value="200")
         self.expect_var_path("base.func2()", value="201")
         self.expect_var_path("uni.method()", value="1")
+        self.expect_var_path("((ns::Derived &)nsbase).method()", value="210")
         self.expect(
             "frame var -- 'base.Base()'",
             error=True,
@@ -97,4 +109,14 @@ class TestFrameVarDILFunctionCall(TestBase):
             "frame var -- 'base.member_add(1, nsbase)'",
             error=True,
             substrs=["function call validation failed: unsupported type of arg3"],
+        )
+        self.expect(
+            "frame var -- 'base.member_add(2, 3, )'",
+            error=True,
+            substrs=["expected argument expression"],
+        )
+        self.expect(
+            "frame var -- 'p_base->member_add(2, 3, 4'",
+            error=True,
+            substrs=["expected 'r_paren', got: <'' (eof)>"],
         )
