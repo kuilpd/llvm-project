@@ -494,7 +494,7 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
 //    postfix_expression "[" expression ":" expression "]"
 //    postfix_expression "." id_expression
 //    postfix_expression "->" id_expression
-//    postfix_expression "." id_expression "(" ")"
+//    postfix_expression "." id_expression "(" function_argument_list ")"
 //
 ASTNodeUP DILParser::ParsePostfixExpression() {
   ASTNodeUP lhs = ParsePrimaryExpression();
@@ -525,10 +525,12 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
       std::string id = ParseIdExpression();
       if (CurToken().Is(Token::l_paren)) {
         m_dil_lexer.Advance();
+        llvm::SmallVector<ASTNodeUP> arguments = ParseFunctionArgumentList();
         Expect(Token::r_paren);
         m_dil_lexer.Advance();
         lhs = std::make_unique<MethodCallNode>(member_token.GetLocation(),
-                                               std::move(lhs), id);
+                                               std::move(lhs), id,
+                                               std::move(arguments));
       } else {
         bool is_arrow = token.GetKind() == Token::arrow;
         lhs = std::make_unique<MemberOfNode>(member_token.GetLocation(),

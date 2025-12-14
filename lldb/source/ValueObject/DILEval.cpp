@@ -2047,6 +2047,8 @@ Interpreter::Visit(const FunctionCallNode *node) {
   lldb_private::EvaluateExpressionOptions options;
   lldb::ThreadPlanSP thread_plan_sp;
   if (arguments.size() == 0) {
+    // Use the legacy ThreadPlanCallFunction if there are no arguments,
+    // since it's implemented for more ABIs.
     llvm::SmallVector<lldb::addr_t, 1> arr_args;
     CompilerType rettype =
         sc.function->GetCompilerType().GetFunctionReturnType();
@@ -2063,11 +2065,10 @@ Interpreter::Visit(const FunctionCallNode *node) {
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const MethodCallNode *node) {
   auto target = m_exe_ctx_scope->CalculateTarget();
-  auto process = m_exe_ctx_scope->CalculateProcess();
   auto thread = m_exe_ctx_scope->CalculateThread();
   ExecutionContext exe_ctx;
   m_exe_ctx_scope->CalculateExecutionContext(exe_ctx);
-  if (!target || !process || !thread)
+  if (!target || !thread)
     return llvm::make_error<DILDiagnosticError>(
         m_expr, "missing context for a function lookup", node->GetLocation());
 
@@ -2079,7 +2080,6 @@ Interpreter::Visit(const MethodCallNode *node) {
                               ? object->GetCompilerType().GetPointeeType()
                               : object->GetCompilerType();
 
-  // TODO: check if the object is a structure or union
   auto type_class = obj_type.GetTypeClass();
   if (type_class != lldb::eTypeClassClass &&
       type_class != lldb::eTypeClassStruct &&
@@ -2092,24 +2092,50 @@ Interpreter::Visit(const MethodCallNode *node) {
   }
 
   // Form a fully qualified name
-  std::string func_name = node->GetMethodName().str();
+  std::string method_name = node->GetMethodName().str();
   std::string base_type = obj_type.GetTypeName().GetString();
-  std::string qualified_func = base_type;
-  qualified_func.append("::").append(func_name);
+  std::string qualified_method = base_type;
+  qualified_method.append("::").append(method_name);
   SymbolContextList sc_list;
   ModuleFunctionSearchOptions function_options;
-  target->GetImages().FindFunctions(ConstString(qualified_func),
+  target->GetImages().FindFunctions(ConstString(qualified_method),
                                     lldb::eFunctionNameTypeMethod,
                                     function_options, sc_list);
 
+  // Evaluate all arguments
+  llvm::SmallVector<lldb::ValueObjectSP, 6> arguments;
+  for (auto &arg_node : node->GetArguments()) {
+    auto arg_or_err = EvaluateAndDereference(arg_node.get());
+    if (!arg_or_err)
+      return arg_or_err;
+    arguments.emplace_back(*arg_or_err);
+  }
+
   SymbolContextList full_matches;
   for (auto sc : sc_list) {
-    // Compare number of arguments, 0 for now
-    if (sc.function->GetCompilerType().GetFunctionArgumentCount() != 0)
-      continue;
     // Check the name
     auto name = sc.function->GetNameNoArguments().GetStringRef();
-    if (name != qualified_func)
+    if (name != qualified_method)
+      continue;
+    // Filter by argument count
+    CompilerType func_type = sc.function->GetCompilerType();
+    int prototype_argc = func_type.GetFunctionArgumentCount();
+    if (func_type.IsVariadicFunctionType() &&
+        prototype_argc > (int)arguments.size())
+      continue;
+    if (!func_type.IsVariadicFunctionType() &&
+        prototype_argc != (int)arguments.size())
+      continue;
+    // Check if argument types match
+    bool types_match = true;
+    for (auto i = 0; i < prototype_argc; i++) {
+      if (arguments[i]->GetCompilerType().GetCanonicalType() !=
+          func_type.GetFunctionArgumentTypeAtIndex(i).GetCanonicalType()) {
+        types_match = false;
+        break;
+      }
+    }
+    if (!types_match)
       continue;
     // Check if the function is a method
     auto member_func = sc.function->GetDeclContext().GetAsMemberFunction();
@@ -2122,30 +2148,53 @@ Interpreter::Visit(const MethodCallNode *node) {
 
   if (full_matches.IsEmpty()) {
     std::string errMsg = llvm::formatv(
-        "no member function named '{0}' in '{1}'", func_name, base_type);
+        "no member function named '{0}' in '{1}'", method_name, base_type);
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                 node->GetLocation());
   }
   if (full_matches.GetSize() > 1) {
-    std::string errMsg =
-        llvm::formatv("call to member function '{0}' is ambiguous", func_name);
+    std::string errMsg = llvm::formatv(
+        "call to member function '{0}' is ambiguous", method_name);
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                 node->GetLocation());
   }
 
   SymbolContext sc;
   full_matches.GetContextAtIndex(0, sc);
-  Address call_addr = sc.function->GetAddress();
-  CompilerType rettype = sc.function->GetCompilerType().GetFunctionReturnType();
-
-  // Prepare arguments, object address is the 1st argument
-  llvm::SmallVector<lldb::addr_t, 1> args;
-  lldb::addr_t obj = object->IsPointerType() ? object->GetPointerValue().address
-                                             : object->GetLoadAddress();
-  args.push_back(obj);
-  auto arr_args = llvm::ArrayRef<lldb::addr_t>(args);
-
-  return CallFunctionViaABI(call_addr, rettype, arr_args, node->GetLocation());
+  lldb_private::EvaluateExpressionOptions options;
+  lldb::ThreadPlanSP thread_plan_sp;
+  if (arguments.size() == 0) {
+    // Use the legacy ThreadPlanCallFunction if there are no arguments,
+    // since it's implemented for more ABIs.
+    llvm::SmallVector<lldb::addr_t, 1> arr_args;
+    lldb::addr_t obj_addr = object->IsPointerType()
+                                ? object->GetPointerValue().address
+                                : object->GetLoadAddress();
+    // Put the object address as the 1st argument
+    arr_args.push_back(obj_addr);
+    Address call_addr = sc.function->GetAddress();
+    CompilerType rettype =
+        sc.function->GetCompilerType().GetFunctionReturnType();
+    thread_plan_sp =
+        std::shared_ptr<lldb_private::ThreadPlan>(new ThreadPlanCallFunction(
+            *thread, call_addr, rettype, arr_args, options));
+  } else {
+    lldb::ValueObjectSP obj_pointer;
+    if (object->IsPointerType()) {
+      obj_pointer = object;
+    } else {
+      // Create a ValueObjectSP with a pointer to the base object
+      lldb::addr_t obj_addr = object->GetLoadAddress();
+      obj_pointer = ValueObject::CreateValueObjectFromAddress(
+          "object_pointer", obj_addr, exe_ctx, obj_type.GetPointerType(),
+          /* do_deref */ false);
+    }
+    // Put the object pointer as the 1st argument
+    arguments.insert(arguments.begin(), obj_pointer);
+    thread_plan_sp = std::shared_ptr<lldb_private::ThreadPlan>(
+        new ThreadPlanCallFunction(*thread, *sc.function, arguments, options));
+  }
+  return ExecuteThreadPlan(thread_plan_sp, options, node->GetLocation());
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const SizeOfNode *node) {

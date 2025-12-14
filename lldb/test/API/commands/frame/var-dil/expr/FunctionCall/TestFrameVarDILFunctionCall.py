@@ -79,3 +79,22 @@ class TestFrameVarDILFunctionCall(TestBase):
                 "member reference base type 'const int' is not a structure or union"
             ],
         )
+
+        # Method calls with arguments
+        self.expect_var_path("base.method(1)", value="400")
+        self.expect_var_path("base.method(1.0f)", value="101.25")
+        self.expect_var_path("base.method(1.0f, 2, 3.0)", value="105")
+        self.expect_var_path("base.method(1, 10, 100, 1000)", value="1210")
+        self.expect_var_path("p_base->method(1.0f, 2, 3.0)", value="105")
+        self.expect_var_path("base.member_add(4, 1, 2, 3, 4)", value="109")
+        self.expect_var_path("base.get_member()", value="109")
+        self.expect(
+            "frame var -- 'base.member_add(1.0, 2.0)'",
+            error=True,
+            substrs=["no member function named 'member_add' in 'Base'"],
+        )
+        self.expect(
+            "frame var -- 'base.member_add(1, nsbase)'",
+            error=True,
+            substrs=["function call validation failed: unsupported type of arg3"],
+        )

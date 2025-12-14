@@ -49,7 +49,7 @@ postfix_expression = primary_expression
                    | postfix_expression "[" expression ":" expression "]"
                    | postfix_expression "." id_expression
                    | postfix_expression "->" id_expression
-                   | postfix_expression "." id_expression "(" ")" ;
+                   | postfix_expression "." id_expression "(" function_argument_list ")" ;
 
 primary_expression = numeric_literal
                    | boolean_literal

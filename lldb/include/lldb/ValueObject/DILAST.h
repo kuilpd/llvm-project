@@ -430,14 +430,17 @@ private:
 
 class MethodCallNode : public ASTNode {
 public:
-  MethodCallNode(uint32_t location, ASTNodeUP object, llvm::StringRef name)
+  MethodCallNode(uint32_t location, ASTNodeUP object, llvm::StringRef name,
+                 llvm::SmallVector<ASTNodeUP> arguments)
       : ASTNode(location, NodeKind::eMethodCallNode),
-        m_object(std::move(object)), m_name(name) {}
+        m_object(std::move(object)), m_name(name),
+        m_arguments(std::move(arguments)) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
   ASTNode *GetObject() const { return m_object.get(); }
   llvm::StringRef GetMethodName() const { return m_name; }
+  llvm::ArrayRef<ASTNodeUP> GetArguments() const { return m_arguments; }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eMethodCallNode;
@@ -446,6 +449,7 @@ public:
 private:
   ASTNodeUP m_object;
   ConstString m_name;
+  llvm::SmallVector<ASTNodeUP> m_arguments;
 };
 
 /// This class contains one Visit method for each specialized type of

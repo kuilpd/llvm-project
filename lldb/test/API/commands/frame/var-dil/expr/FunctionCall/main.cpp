@@ -26,14 +26,28 @@ int func3() { return 203; }
 
 struct Base {
   int member = 99;
+  int get_member() { return member; }
   static const int array[];
   static int func2() { return 201; }
   static int func2(float f) { return f + 202; }
   static int func2(double d) { return d + 203; }
   int method() { return 300 + member; }
-  int method(int i) { return 300 + i; }
+  int method(int i) { return 300 + i + member; }
+  float method(float f) { return member + f + 1.25f; }
+  double method(float f, int i, double d) { return member + f + i + d; }
+  int method(int a, int b, int c, int d) { return member + a + b + c + d; }
   int ambiguous(float f) { return 10; }
   int ambiguous(double d) { return 20; }
+  int member_add(int N, ...) {
+    va_list args;
+    va_start(args, N);
+    int sum = 0;
+    for (auto i = 0; i < N; i++)
+      sum += va_arg(args, int);
+    va_end(args);
+    member += sum;
+    return member;
+  }
 };
 const int Base::array[] = {10};
 const int *arr_ptr = Base::array;
@@ -73,15 +87,22 @@ int main(int argc, char **argv) {
   ns::Base *p_nsbase = new ns::Derived(20);
   auto *p_nsderived = static_cast<ns::Derived *>(p_nsbase);
   Base base = Base();
+  Base *p_base = &base;
   Union uni = Union();
   int r0 = Base::func2();
   int r1 = ns::Base::func2();
   int r2 = base.method();
   int r3 = nsbase.method();
   int r4 = uni.method();
+  int r6 = base.method(2);
+  auto r7 = base.method(2.0f);
+  auto r8 = base.method(2.0f, 2, 3.0);
+  auto r9 = base.method(2, 10, 100, 1000);
+  auto r10 = base.member_add(1, 0);
+  auto r11 = base.get_member();
 
   stop(); // Set a breakpoint here
-  double r5 = func0(1.0f, 2, 4.0);
-  double r6 = dsum(3, 128.125, 2.0, 4.0);
+  double r100 = func0(1.0f, 2, 4.0);
+  double r101 = dsum(3, 128.125, 2.0, 4.0);
   return 0;
 }
