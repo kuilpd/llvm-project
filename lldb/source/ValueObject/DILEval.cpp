@@ -1873,47 +1873,6 @@ Interpreter::Visit(const ConditionalNode *node) {
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-Interpreter::CallFunctionViaABI(Address &call_addr, CompilerType &return_type,
-                                llvm::ArrayRef<lldb::addr_t> arr_args,
-                                uint32_t location) {
-  auto process = m_exe_ctx_scope->CalculateProcess();
-  auto thread = m_exe_ctx_scope->CalculateThread();
-  if (!process || !thread)
-    return llvm::make_error<DILDiagnosticError>(
-        m_expr, "missing context for an ABI call", location);
-  ExecutionContext exe_ctx;
-  m_exe_ctx_scope->CalculateExecutionContext(exe_ctx);
-
-  // Create, validate, and run ThreadPlanCallFunction
-  lldb::ABISP abi_sp = process->GetABI();
-  lldb_private::EvaluateExpressionOptions options;
-  lldb::ThreadPlanSP call_plan_sp(new ThreadPlanCallFunction(
-      *thread, call_addr, return_type, arr_args, options));
-  StreamString error;
-  if (!call_plan_sp || !call_plan_sp->ValidatePlan(&error)) {
-    std::string message = llvm::formatv("function call validation failed: {0}",
-                                        error.GetString());
-    return llvm::make_error<DILDiagnosticError>(m_expr, message, location);
-  }
-  lldb_private::DiagnosticManager diagnostics;
-  lldb::ExpressionResults expr_result =
-      process->RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
-  if (expr_result != lldb::eExpressionCompleted) {
-    std::string errMsg =
-        llvm::formatv("function call failed: {0}", toString(expr_result));
-    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
-  }
-
-  lldb::ValueObjectSP ret_val = call_plan_sp->GetReturnValueObject();
-  if (ret_val) {
-    ret_val->SetName(ConstString("result"));
-    return ret_val;
-  }
-  return llvm::make_error<DILDiagnosticError>(
-      m_expr, "unable to retrieve function return value", location);
-}
-
-llvm::Expected<lldb::ValueObjectSP>
 Interpreter::ExecuteThreadPlan(lldb::ThreadPlanSP thread_plan_sp,
                                lldb_private::EvaluateExpressionOptions options,
                                uint32_t location) {
