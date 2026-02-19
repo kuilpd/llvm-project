@@ -40,11 +40,6 @@ class TestFrameVarDILFunctionCall(TestBase):
         self.expect_var_path("debase(&nsbase, 100)", value="110")
         self.expect_var_path("dsum(4, 1.0, 2.0, 3.0, 4.0)", value="10")
         self.expect(
-            "frame var -- 'dsum(1.0, 2.0)'",
-            error=True,
-            substrs=["no matching function for call to 'dsum'"],
-        )
-        self.expect(
             "frame var -- 'dsum(1, nsbase)'",
             error=True,
             substrs=["function call validation failed: unsupported type of arg2"],
@@ -58,6 +53,17 @@ class TestFrameVarDILFunctionCall(TestBase):
             "frame var -- 'dsum(2, 3, 4'",
             error=True,
             substrs=["expected 'r_paren', got: <'' (eof)>"],
+        )
+
+        # Function calls with implicit conversions:
+        self.expect_var_path("dsum(2.0, 1.0, 2.0)", value="3")
+        self.expect_var_path("get_value(arr, 2)", value="3")
+        self.expect_var_path("ivoid(p_arr)", value="1")
+        self.expect_var_path("ivoid(nullptr)", value="-1")
+        self.expect(
+            "frame var -- 'func0(1.0)'",
+            error=True,
+            substrs=["call to 'func0' is ambiguous"],
         )
 
         # Static method calls

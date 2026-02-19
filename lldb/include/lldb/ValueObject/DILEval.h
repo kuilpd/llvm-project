@@ -9,8 +9,10 @@
 #ifndef LLDB_VALUEOBJECT_DILEVAL_H
 #define LLDB_VALUEOBJECT_DILEVAL_H
 
+#include "lldb/Symbol/Function.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
+#include "clang/Sema/Overload.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <memory>
@@ -35,6 +37,42 @@ lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
                                            std::shared_ptr<StackFrame> frame_sp,
                                            lldb::TargetSP target_sp,
                                            lldb::DynamicValueType use_dynamic);
+
+struct OverloadCandidate {
+  struct Argument {
+    Argument(lldb::ValueObjectSP valobj, clang::ImplicitConversionRank rank)
+        : ConversionRank(rank) {
+      ValueObject = valobj;
+    }
+    lldb::ValueObjectSP ValueObject;
+    clang::ImplicitConversionRank ConversionRank;
+  };
+  OverloadCandidate() = default;
+  OverloadCandidate(Function *function) : Function(function) {}
+  Function *Function;
+  llvm::SmallVector<Argument, 6> Arguments;
+
+  bool operator==(OverloadCandidate &other) {
+    assert(Arguments.size() == other.Arguments.size());
+    bool all_equal = true;
+    for (size_t i = 0; i < Arguments.size(); i++) {
+      if (Arguments[i].ConversionRank != other.Arguments[i].ConversionRank)
+        all_equal = false;
+    }
+    return all_equal;
+  }
+  bool operator<(OverloadCandidate &other) {
+    assert(Arguments.size() == other.Arguments.size());
+    if (*this == other)
+      return false;
+    bool better = true;
+    for (size_t i = 0; i < Arguments.size(); i++) {
+      if (Arguments[i].ConversionRank > other.Arguments[i].ConversionRank)
+        better = false;
+    }
+    return better;
+  }
+};
 
 class Interpreter : Visitor {
 public:
@@ -131,6 +169,9 @@ private:
   ExecuteThreadPlan(lldb::ThreadPlanSP thread_plan_sp,
                     lldb_private::EvaluateExpressionOptions options,
                     uint32_t location);
+  std::tuple<lldb::ValueObjectSP, clang::ImplicitConversionKind>
+  ImplicitCast(lldb::ValueObjectSP &valobj, CompilerType target_type,
+               uint32_t location);
 
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;

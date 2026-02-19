@@ -1908,6 +1908,113 @@ Interpreter::ExecuteThreadPlan(lldb::ThreadPlanSP thread_plan_sp,
       m_expr, "unable to retrieve function return value", location);
 }
 
+static size_t
+FilterCandidates(llvm::SmallVector<OverloadCandidate> &candidates) {
+  if (candidates.empty())
+    return 0;
+  std::sort(candidates.begin(), candidates.end(),
+            [](OverloadCandidate &l, OverloadCandidate &r) { return l < r; });
+  while (candidates.size() >= 2) {
+    auto last = candidates.pop_back_val();
+    if (last == candidates.back()) {
+      candidates.emplace_back(last);
+      break;
+    }
+  }
+  return candidates.size();
+}
+
+static llvm::Error
+AmbiguousCall(llvm::StringRef expr, llvm::StringRef func_name,
+              llvm::SmallVector<OverloadCandidate> &candidates,
+              uint32_t location) {
+  std::string errMsg = llvm::formatv("call to '{0}' is ambiguous", func_name);
+  auto err = llvm::make_error<DILDiagnosticError>(expr, errMsg, location);
+  for (auto &candidate : candidates) {
+    auto note = llvm::createStringError(
+        llvm::formatv("note: candidate function: {0} {1}",
+                      candidate.Function->GetCompilerType()
+                          .GetFunctionReturnType()
+                          .GetTypeName(),
+                      candidate.Function->GetDisplayName()));
+    err = llvm::joinErrors(std::move(err), std::move(note));
+  }
+  return err;
+}
+
+std::tuple<lldb::ValueObjectSP, clang::ImplicitConversionKind>
+Interpreter::ImplicitCast(lldb::ValueObjectSP &valobj, CompilerType target_type,
+                          uint32_t location) {
+  bool is_rvalue;
+  bool is_ref = target_type.IsReferenceType(nullptr, &is_rvalue);
+  // TODO: handle references: get address for reference, pass literals to rvalue
+  if (is_ref && is_rvalue)
+    return {nullptr, clang::ImplicitConversionKind::ICK_Identity};
+  CompilerType valobj_type = valobj->GetCompilerType();
+  // https://eel.is/c++draft/conv.array
+  if (valobj_type.IsArrayType() && target_type.IsPointerType()) {
+    CompilerType arr_ptr_type =
+        valobj_type.GetArrayElementType(m_exe_ctx_scope.get()).GetPointerType();
+    if (arr_ptr_type == target_type)
+      return {ArrayToPointerConversion(valobj, m_exe_ctx_scope),
+              clang::ImplicitConversionKind::ICK_Array_To_Pointer};
+    return {nullptr, clang::ImplicitConversionKind::ICK_Identity};
+  }
+  // https://eel.is/c++draft/conv.ptr#1
+  if (valobj_type.IsNullPtrType() && target_type.IsPointerType()) {
+    Scalar ptr_value;
+    valobj->ResolveValue(ptr_value);
+    auto ptr_valobj = ValueObject::CreateValueObjectFromScalar(
+        m_target, ptr_value, target_type, "result");
+    return {ptr_valobj, clang::ImplicitConversionKind::ICK_Pointer_Conversion};
+  }
+  // https://eel.is/c++draft/conv.ptr#2
+  if (valobj_type.IsPointerType() && target_type.IsPointerToVoid()) {
+    Scalar ptr_value;
+    valobj->ResolveValue(ptr_value);
+    auto ptr_valobj = ValueObject::CreateValueObjectFromScalar(
+        m_target, ptr_value, target_type, "result");
+    return {ptr_valobj, clang::ImplicitConversionKind::ICK_Pointer_Conversion};
+  }
+  if (!target_type.IsBasicType())
+    return {nullptr, clang::ImplicitConversionKind::ICK_Identity};
+  // Promotions & conversions between basic types
+  lldb::ValueObjectSP result = valobj->CastToBasicType(target_type);
+  if (result) {
+    // https://eel.is/c++draft/conv.prom#7
+    if (valobj_type.IsBoolean() && target_type.IsInteger())
+      return {result, clang::ImplicitConversionKind::ICK_Integral_Promotion};
+    if (valobj_type.IsUnscopedEnumerationType() && target_type.IsInteger()) {
+      // https://eel.is/c++draft/conv.prom#4
+      if (valobj_type.GetEnumerationIntegerType() == target_type)
+        return {result, clang::ImplicitConversionKind::ICK_Integral_Promotion};
+      else // https://eel.is/c++draft/conv.integral#1
+        return {result, clang::ImplicitConversionKind::ICK_Integral_Conversion};
+    }
+    // https://eel.is/c++draft/conv.fpprom#1
+    if (valobj_type.GetBasicTypeEnumeration() == lldb::eBasicTypeFloat &&
+        target_type.GetBasicTypeEnumeration() == lldb::eBasicTypeDouble)
+      return {result, clang::ImplicitConversionKind::ICK_Floating_Promotion};
+    // https://eel.is/c++draft/conv.integral#1
+    if (valobj_type.IsInteger() && target_type.IsInteger())
+      return {result, clang::ImplicitConversionKind::ICK_Integral_Conversion};
+    // https://eel.is/c++draft/conv.integral#2
+    if (valobj_type.IsInteger() && target_type.IsBoolean())
+      return {result, clang::ImplicitConversionKind::ICK_Integral_Conversion};
+    // https://eel.is/c++draft/conv.double#1
+    if (valobj_type.IsFloat() && target_type.IsFloat())
+      return {result, clang::ImplicitConversionKind::ICK_Floating_Conversion};
+    // https://eel.is/c++draft/conv.fpint#1
+    if (valobj_type.IsFloat() && target_type.IsInteger())
+      return {result, clang::ImplicitConversionKind::ICK_Floating_Integral};
+    // https://eel.is/c++draft/conv.fpint#2
+    if (valobj_type.IsIntegerOrUnscopedEnumerationType() &&
+        target_type.IsFloat())
+      return {result, clang::ImplicitConversionKind::ICK_Floating_Integral};
+  }
+  return {nullptr, clang::ImplicitConversionKind::ICK_Identity};
+}
+
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const FunctionCallNode *node) {
   auto target = m_exe_ctx_scope->CalculateTarget();
@@ -1942,9 +2049,9 @@ Interpreter::Visit(const FunctionCallNode *node) {
     arguments.emplace_back(*arg_or_err);
   }
 
-  SymbolContextList full_matches;
-  SymbolContextList partial_matches;
-  SymbolContextList method_matches;
+  llvm::SmallVector<OverloadCandidate> function_candidates;
+  llvm::SmallVector<OverloadCandidate> static_method_candidates;
+  llvm::SmallVector<OverloadCandidate> partial_function_candidates;
   for (auto sc : sc_list) {
     // Filter by argument count
     CompilerType func_type = sc.function->GetCompilerType();
@@ -1956,15 +2063,29 @@ Interpreter::Visit(const FunctionCallNode *node) {
         prototype_argc != (int)arguments.size())
       continue;
     // Check if argument types match
-    bool types_match = true;
+    bool conversion_success = true;
+    OverloadCandidate candidate(sc.function);
+    llvm::SmallVector<lldb::ValueObjectSP, 6> candidate_args;
     for (auto i = 0; i < prototype_argc; i++) {
-      if (arguments[i]->GetCompilerType().GetCanonicalType() !=
-          func_type.GetFunctionArgumentTypeAtIndex(i).GetCanonicalType()) {
-        types_match = false;
-        break;
+      CompilerType func_arg_type =
+          func_type.GetFunctionArgumentTypeAtIndex(i).GetCanonicalType();
+      if (arguments[i]->GetCompilerType().GetCanonicalType() == func_arg_type) {
+        candidate.Arguments.emplace_back(
+            arguments[i], clang::ImplicitConversionRank::ICR_Exact_Match);
+      } else {
+        auto [implicit_arg, kind] =
+            ImplicitCast(arguments[i], func_arg_type,
+                         node->GetArguments()[i]->GetLocation());
+        if (implicit_arg) {
+          candidate.Arguments.emplace_back(implicit_arg,
+                                           clang::GetConversionRank(kind));
+        } else {
+          conversion_success = false;
+          break;
+        }
       }
     }
-    if (!types_match)
+    if (!conversion_success)
       continue;
     // Sort into full function matches, partial function matches,
     // and full static method matches
@@ -1973,50 +2094,62 @@ Interpreter::Visit(const FunctionCallNode *node) {
     if (member_func &&
         member_func.GetKind() == lldb::eMemberFunctionKindStaticMethod) {
       if (name == func_name)
-        method_matches.Append(sc);
+        static_method_candidates.emplace_back(candidate);
     } else {
       if (name == func_name)
-        full_matches.Append(sc);
+        function_candidates.emplace_back(candidate);
       else if (name.ends_with(func_name))
-        partial_matches.Append(sc);
+        partial_function_candidates.emplace_back(candidate);
     }
   }
 
-  if (full_matches.GetSize() > 1 || partial_matches.GetSize() > 1 ||
-      method_matches.GetSize() > 1) {
-    std::string errMsg = llvm::formatv("call to '{0}' is ambiguous", func_name);
-    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
-                                                node->GetLocation());
-  }
-  SymbolContext sc;
-  if (full_matches.GetSize() == 1)
-    full_matches.GetContextAtIndex(0, sc);
-  else if (method_matches.GetSize() == 1)
-    method_matches.GetContextAtIndex(0, sc);
-  else if (partial_matches.GetSize() == 1)
-    partial_matches.GetContextAtIndex(0, sc);
-  else {
+  OverloadCandidate winner;
+  if (auto cand_number = FilterCandidates(function_candidates)) {
+    if (cand_number > 1)
+      return AmbiguousCall(m_expr, func_name, function_candidates,
+                           node->GetLocation());
+    winner = function_candidates.back();
+  } else if (auto cand_number = FilterCandidates(static_method_candidates)) {
+    if (cand_number > 1)
+      return AmbiguousCall(m_expr, func_name, static_method_candidates,
+                           node->GetLocation());
+    winner = static_method_candidates.back();
+  } else if (auto cand_number = FilterCandidates(partial_function_candidates)) {
+    if (cand_number > 1)
+      return AmbiguousCall(m_expr, func_name, partial_function_candidates,
+                           node->GetLocation());
+    winner = partial_function_candidates.back();
+  } else {
     std::string errMsg =
         llvm::formatv("no matching function for call to '{0}'", func_name);
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                 node->GetLocation());
   }
 
-  Address call_addr = sc.function->GetAddress();
+  Function *function = winner.Function;
+  llvm::SmallVector<lldb::ValueObjectSP, 6> candidate_arguments;
+  for (auto &arg : winner.Arguments)
+    candidate_arguments.emplace_back(arg.ValueObject);
+  if (function->GetCompilerType().IsVariadicFunctionType()) {
+    for (auto i = candidate_arguments.size(); i < arguments.size(); i++)
+      candidate_arguments.emplace_back(arguments[i]);
+  }
+
+  Address call_addr = function->GetAddress();
   lldb_private::EvaluateExpressionOptions options;
   lldb::ThreadPlanSP thread_plan_sp;
-  if (arguments.size() == 0) {
+  if (candidate_arguments.size() == 0) {
     // Use the legacy ThreadPlanCallFunction if there are no arguments,
     // since it's implemented for more ABIs.
     llvm::SmallVector<lldb::addr_t, 1> arr_args;
-    CompilerType rettype =
-        sc.function->GetCompilerType().GetFunctionReturnType();
+    CompilerType rettype = function->GetCompilerType().GetFunctionReturnType();
     thread_plan_sp =
         std::shared_ptr<lldb_private::ThreadPlan>(new ThreadPlanCallFunction(
             *thread, call_addr, rettype, arr_args, options));
   } else {
-    thread_plan_sp = std::shared_ptr<lldb_private::ThreadPlan>(
-        new ThreadPlanCallFunction(*thread, *sc.function, arguments, options));
+    thread_plan_sp =
+        std::shared_ptr<lldb_private::ThreadPlan>(new ThreadPlanCallFunction(
+            *thread, *function, candidate_arguments, options));
   }
   return ExecuteThreadPlan(thread_plan_sp, options, node->GetLocation());
 }
