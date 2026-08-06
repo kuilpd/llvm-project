@@ -95,9 +95,9 @@ int LibfuzzerState::init(int* /*argc*/, char*** argv) {
   symtab_ = fuzzer::SymbolTable::create_from_frame(
       frame_, /*ignore_qualified_types*/ true);
 
-  // Add lldb-eval functions.
-  symtab_.add_function(ScalarType::UnsignedInt, "__log2",
-                       {ScalarType::UnsignedInt});
+  // // Add lldb-eval functions.
+  // symtab_.add_function(ScalarType::UnsignedInt, "__log2",
+  //                      {ScalarType::UnsignedInt});
 
   return 0;
 }
