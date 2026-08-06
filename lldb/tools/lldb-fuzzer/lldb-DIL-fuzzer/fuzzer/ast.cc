@@ -494,12 +494,7 @@ std::ostream& operator<<(std::ostream& os, const SizeofExpr& expr) {
   auto maybe_expr = expr.maybe_expr();
   if (maybe_expr.has_value()) {
     const Expr& child = maybe_expr.value();
-    // If the child isn't a parenthesized expression, separate the expression
-    // and 'sizeof' with a space.
-    if (!std::holds_alternative<ParenthesizedExpr>(child)) {
-      os << " ";
-    }
-    return os << child;
+    return os << "(" << child << ")";
   }
   auto maybe_type = expr.maybe_type();
   if (maybe_type.has_value()) {
