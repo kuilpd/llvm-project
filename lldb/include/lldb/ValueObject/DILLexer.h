@@ -26,6 +26,7 @@ class Token {
 public:
   enum Kind {
     amp,
+    ampamp,
     arrow,
     caret,
     colon,
@@ -33,6 +34,7 @@ public:
     eof,
     equal,
     equalequal,
+    exclaim,
     exclaimequal,
     float_constant,
     greater,
@@ -52,6 +54,7 @@ public:
     percent,
     period,
     pipe,
+    pipepipe,
     plus,
     plusequal,
     r_paren,

@@ -51,6 +51,10 @@ BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind) {
     return BinaryOpKind::EQ;
   case Token::exclaimequal:
     return BinaryOpKind::NE;
+  case Token::ampamp:
+    return BinaryOpKind::LAnd;
+  case Token::pipepipe:
+    return BinaryOpKind::LOr;
   default:
     break;
   }
