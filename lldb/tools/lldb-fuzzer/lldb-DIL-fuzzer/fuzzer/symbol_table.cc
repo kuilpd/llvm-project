@@ -89,6 +89,15 @@ bool is_scoped_enum(T type) {
   return false;
 }
 
+bool is_template_name(const char* name) {
+  for (const char* c = name; *c != '\0'; ++c) {
+    if (*c == '<' || *c == '>') {
+      return true;
+    }
+  }
+  return false;
+}
+
 std::optional<Type> convert_type(lldb::SBType type,
                                  bool ignore_qualified_types) {
   type = type.GetCanonicalType();
@@ -126,10 +135,16 @@ std::optional<Type> convert_type(lldb::SBType type,
   }
 
   if (is_tagged_type(type)) {
+    if (is_template_name(type.GetName())) {
+      return {};
+    }
     return TaggedType(type.GetName());
   }
 
   if (type.GetTypeClass() == lldb::eTypeClassEnumeration) {
+    if (is_template_name(type.GetName())) {
+      return {};
+    }
     return EnumType(type.GetName(), is_scoped_enum(type));
   }
 
@@ -325,10 +340,17 @@ class ClassAnalyzer {
     for (uint32_t i = 0; i < type.GetNumberOfFields(); ++i) {
       lldb::SBTypeMember field = type.GetFieldAtIndex(i);
       auto maybe_type = convert_type(field.GetType(), ignore_qualified_types_);
-      if (maybe_type.has_value()) {
-        fields.emplace(fix_name(field.GetName()), std::move(maybe_type.value()),
-                       next_field_id(), field.GetType().IsReferenceType());
+      if (!maybe_type.has_value()) {
+        continue;
       }
+
+      const std::string field_name = fix_name(field.GetName());
+      if (is_template_name(field_name.c_str())) {
+        continue;
+      }
+
+      fields.emplace(field_name, std::move(maybe_type.value()), next_field_id(),
+                     field.GetType().IsReferenceType());
     }
 
     // SBType::GetDirectBaseClass includes both virtual and non-virtual base
@@ -388,11 +410,12 @@ void load_frame_variables(SymbolTable& symtab, lldb::SBFrame& frame,
   for (uint32_t i = 0; i < variables_size; ++i) {
     lldb::SBValue value = variables.GetValueAtIndex(i);
     auto maybe_type = convert_type(value.GetType(), ignore_qualified_types);
-    if (maybe_type.has_value()) {
-      symtab.add_var(maybe_type.value(),
-                     VariableExpr(fix_name(value.GetName())),
-                     calculate_freedom_index(value, memory_regions));
+    const char* variable_name = fix_name(value.GetName());
+    if (!maybe_type.has_value() || is_template_name(variable_name)) {
+      continue;
     }
+    symtab.add_var(maybe_type.value(), VariableExpr(variable_name),
+                   calculate_freedom_index(value, memory_regions));
   }
 }
 
@@ -424,11 +447,18 @@ ClassAnalyzer load_tagged_types(SymbolTable& symtab, lldb::SBFrame& frame,
 
     // Enumerations.
     if (type.GetTypeClass() == lldb::eTypeClassEnumeration) {
+      if (is_template_name(type.GetName())) {
+        continue;
+      }
       const auto enum_type = EnumType(type.GetName(), is_scoped_enum(type));
       lldb::SBTypeEnumMemberList members = type.GetEnumMembers();
       for (uint32_t i = 0; i < members.GetSize(); ++i) {
         lldb::SBTypeEnumMember member = members.GetTypeEnumMemberAtIndex(i);
-        symtab.add_enum_literal(enum_type, member.GetName());
+        const char* enum_literal = member.GetName();
+        if (is_template_name(enum_literal)) {
+          continue;
+        }
+        symtab.add_enum_literal(enum_type, enum_literal);
       }
     }
   }
