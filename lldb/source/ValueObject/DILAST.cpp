@@ -109,4 +109,8 @@ llvm::Expected<lldb::ValueObjectSP> CastNode::Accept(Visitor *v) const {
   return v->Visit(*this);
 }
 
+llvm::Expected<lldb::ValueObjectSP> ConditionalNode::Accept(Visitor *v) const {
+  return v->Visit(*this);
+}
+
 } // namespace lldb_private::dil
