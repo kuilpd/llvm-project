@@ -113,4 +113,8 @@ llvm::Expected<lldb::ValueObjectSP> ConditionalNode::Accept(Visitor *v) const {
   return v->Visit(*this);
 }
 
+llvm::Expected<lldb::ValueObjectSP> SizeOfNode::Accept(Visitor *v) const {
+  return v->Visit(*this);
+}
+
 } // namespace lldb_private::dil
