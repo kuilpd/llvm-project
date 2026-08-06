@@ -1183,6 +1183,7 @@ std::optional<Type> ExprGenerator::gen_type(
   }
 
   TypeKindMask mask = TypeKindMask::all_set();
+  mask[TypeKind::TaggedType] = false;
 
   if (type_constraints.allowed_scalar_types().none()) {
     mask[TypeKind::ScalarType] = false;
