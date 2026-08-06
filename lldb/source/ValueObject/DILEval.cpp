@@ -994,9 +994,6 @@ Interpreter::ValidateComparison(BinaryOpKind kind, lldb::ValueObjectSP &lhs,
   auto orig_lhs_type = lhs->GetCompilerType();
   auto orig_rhs_type = rhs->GetCompilerType();
 
-  if (orig_lhs_type == orig_rhs_type)
-    return llvm::Error::success();
-
   bool is_ordered = (kind == BinaryOpKind::LT || kind == BinaryOpKind::LE ||
                      kind == BinaryOpKind::GT || kind == BinaryOpKind::GE);
   bool lhs_nullptr_or_zero =
@@ -1011,6 +1008,10 @@ Interpreter::ValidateComparison(BinaryOpKind kind, lldb::ValueObjectSP &lhs,
 
   CompilerType lhs_type = lhs->GetCompilerType();
   CompilerType rhs_type = rhs->GetCompilerType();
+
+  if (lhs_type == rhs_type)
+    return llvm::Error::success();
+
   lldb::ValueObjectSP lhs_child;
   lldb::ValueObjectSP rhs_child;
   bool is_signed;
@@ -1145,9 +1146,6 @@ Interpreter::EvaluateComparison(BinaryOpKind kind, lldb::ValueObjectSP lhs,
   if (auto error = ValidateComparison(kind, lhs, rhs, lhs_is_literal,
                                       rhs_is_literal, location))
     return error;
-
-  CompilerType lhs_type = lhs->GetCompilerType();
-  CompilerType rhs_type = rhs->GetCompilerType();
 
   llvm::Expected<lldb::TypeSystemSP> type_system =
       GetTypeSystemFromCU(m_stack_frame);
