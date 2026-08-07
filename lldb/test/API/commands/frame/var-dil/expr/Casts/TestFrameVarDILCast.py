@@ -322,3 +322,15 @@ class TestFrameVarDILCast(TestBase):
             error=True,
             substrs=["Cast from 'InnerFoo' to 'UnscopedEnum' is not allowed"],
         )
+
+        # Check that "nullptr" is not treated as a type
+        self.expect(
+            "frame variable '(nullptr) 0'",
+            error=True,
+            substrs=["expected 'eof', got: <'0'"],
+        )
+        self.expect(
+            "frame variable '(const nullptr) 0'",
+            error=True,
+            substrs=["expected 'r_paren', got: <'nullptr'"],
+        )

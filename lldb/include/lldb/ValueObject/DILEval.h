@@ -18,6 +18,9 @@
 
 namespace lldb_private::dil {
 
+/// Retrieve the type system of the compile unit of the given frame.
+llvm::Expected<lldb::TypeSystemSP> GetTypeSystemFromCU(StackFrame &ctx);
+
 /// Given the name of an identifier (variable name, member name, type name,
 /// etc.), find the ValueObject for that name (if it exists), excluding global
 /// variables, and create and return an IdentifierInfo object containing all

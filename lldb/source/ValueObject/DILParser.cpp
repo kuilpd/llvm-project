@@ -776,12 +776,16 @@ std::optional<CompilerType> DILParser::ParseBuiltinType() {
     m_dil_lexer.Advance();
   }
 
-  if (type_name.size() > 0) {
+  // TypeSystemClang::GetBasicTypeEnumeration considers "nullptr" a basic
+  // type, but we want it to be an identifier representing a null pointer.
+  if (type_name.size() > 0 && type_name != "nullptr") {
     lldb::TargetSP target_sp = m_stack_frame.CalculateTarget();
     ConstString const_type_name(type_name);
-    for (auto type_system_sp : target_sp->GetScratchTypeSystems())
+    llvm::Expected<lldb::TypeSystemSP> type_system =
+        GetTypeSystemFromCU(m_stack_frame);
+    if (type_system)
       if (auto compiler_type =
-              type_system_sp->GetBuiltinTypeByName(const_type_name))
+              type_system.get()->GetBuiltinTypeByName(const_type_name))
         return compiler_type;
   }
 

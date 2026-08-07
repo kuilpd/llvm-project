@@ -44,7 +44,7 @@ static lldb::ValueObjectSP ArrayToPointerConversion(ValueObject &valobj,
       /* do_deref */ false);
 }
 
-static llvm::Expected<lldb::TypeSystemSP> GetTypeSystemFromCU(StackFrame &ctx) {
+llvm::Expected<lldb::TypeSystemSP> GetTypeSystemFromCU(StackFrame &ctx) {
   SymbolContext symbol_context =
       ctx.GetSymbolContext(lldb::eSymbolContextCompUnit);
   if (!symbol_context.comp_unit)
