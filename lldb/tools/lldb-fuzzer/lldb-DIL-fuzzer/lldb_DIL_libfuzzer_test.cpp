@@ -36,10 +36,18 @@ extern "C" size_t LLVMFuzzerCustomMutator(uint8_t* data, size_t size,
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   std::string expr = g_state.input_to_expr(data, size);
-  std::cerr <<  "Expr:  " << expr.data() << std::endl;
   lldb::SBError error;
   auto result = g_state.frame().GetValueForVariablePath(expr.c_str(), lldb::eNoDynamicValues);
   if (result.GetError().Fail()) {
+    std::string message = result.GetError().GetCString();
+    // Silence UB errors
+    if (message.find("arithmetic on a nullptr is undefined") != std::string::npos)
+      return 0;
+    if (message.find("division by zero is undefined") != std::string::npos)
+      return 0;
+    if (message.find("invalid shift amount") != std::string::npos)
+      return 0;
+    std::cerr <<  "Expr:  " << expr.data() << std::endl;
     fprintf(stderr, "Error: %s\n\n", result.GetError().GetCString());
   }
   return 0;
